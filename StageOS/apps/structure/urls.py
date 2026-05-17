@@ -1,0 +1,29 @@
+from rest_framework.routers import DefaultRouter
+from .views import (
+    ApprovalPolicyViewSet,
+    DepartmentViewSet,
+    EvidenceRuleViewSet,
+    ModuleActivationViewSet,
+    OrganisationOperatingModelViewSet,
+    PositionViewSet,
+    SOPTemplateViewSet,
+    SiteViewSet,
+    SpaceViewSet,
+    UserDepartmentMembershipViewSet,
+    VenueViewSet,
+)
+
+router = DefaultRouter()
+router.register('sites', SiteViewSet, basename='site')
+router.register('venues', VenueViewSet, basename='venue')
+router.register('spaces', SpaceViewSet, basename='space')
+router.register('departments', DepartmentViewSet, basename='department')
+router.register('positions', PositionViewSet, basename='position')
+router.register('operating-models', OrganisationOperatingModelViewSet, basename='operating-model')
+router.register('user-department-memberships', UserDepartmentMembershipViewSet, basename='user-department-membership')
+router.register('module-activations', ModuleActivationViewSet, basename='module-activation')
+router.register('approval-policies', ApprovalPolicyViewSet, basename='approval-policy')
+router.register('evidence-rules', EvidenceRuleViewSet, basename='evidence-rule')
+router.register('sop-templates', SOPTemplateViewSet, basename='sop-template')
+
+urlpatterns = router.urls

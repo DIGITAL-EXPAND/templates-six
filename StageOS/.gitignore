@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+.env
+.venv/
+venv/
+.env.local
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+server.log
+.claude/
+media/
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo

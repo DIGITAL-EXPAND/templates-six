@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+
+
+class IntegrationsConfig(AppConfig):
+    name = 'apps.integrations'
+    label = 'integrations'
+    default_auto_field = 'django.db.models.BigAutoField'
+    verbose_name = 'Integrations'

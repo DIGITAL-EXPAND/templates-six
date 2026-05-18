@@ -129,9 +129,9 @@ export default function WorkspacesPage() {
           </div>
         ) : (
           <div className="rounded-lg border border-slate-200 bg-white p-8">
-            <h2 className="text-base font-bold text-slate-950">No Workspaces yet</h2>
+            <h2 className="text-base font-bold text-slate-950">No Shows or Events yet</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Create a Workspace when you are ready to plan a production, booking, youth project,
+              Add a show or event when you are ready to plan a production, booking, youth project,
               festival or programme.
             </p>
           </div>

@@ -47,6 +47,7 @@ import type {
   EvidenceGapsReport,
   ExecutiveSummary,
   OperatingContextListItem,
+  OperatingProfile,
   RiskRegisterReport,
   SupplierReadinessReport,
   YouthProjectItem,
@@ -54,7 +55,6 @@ import type {
 } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { dashboardKind } from '@/lib/role-experience';
-import type { OperatingProfile } from '@/lib/api/types';
 
 type ActiveReport =
   | 'executive'

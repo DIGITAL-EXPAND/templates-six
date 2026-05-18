@@ -1,3 +1,5 @@
+import hashlib
+import json
 import uuid
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -39,6 +41,8 @@ class AuditEvent(models.Model):
     reason = models.TextField(blank=True)
     payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    previous_hash = models.CharField(max_length=64, blank=True)
+    record_hash = models.CharField(max_length=64, editable=False, blank=True)
 
     objects = AuditEventManager()
 
@@ -48,10 +52,35 @@ class AuditEvent(models.Model):
     def __str__(self):
         return f'{self.event_type} @ {self.created_at}'
 
+    def compute_hash(self, previous_hash: str) -> str:
+        payload = json.dumps({
+            'previous_hash': previous_hash,
+            'organisation_id': str(self.organisation_id),
+            'actor_id': str(self.actor_id) if self.actor_id else '',
+            'event_type': self.event_type,
+            'target_type': self.target_type,
+            'target_id': self.target_id,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat(),
+        }, sort_keys=True, ensure_ascii=True)
+        return hashlib.sha256(payload.encode()).hexdigest()
+
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError('AuditEvent records cannot be updated.')
+        # Compute hash chain before saving
+        prior = (
+            AuditEvent.objects.filter(organisation_id=self.organisation_id)
+            .order_by('-created_at')
+            .first()
+        )
+        self.previous_hash = prior.record_hash if prior else ''
+        # created_at is auto_now_add so we need to save first, then compute hash
+        # Use a temporary save approach: save to get created_at, then update hash directly
         super().save(*args, **kwargs)
+        self.record_hash = self.compute_hash(self.previous_hash)
+        # Use direct DB update to avoid triggering the immutability guard
+        AuditEvent.objects.filter(pk=self.pk).update(record_hash=self.record_hash)
 
     def delete(self, *args, **kwargs):
         raise ValidationError('AuditEvent records cannot be deleted.')

@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'apps.tasks.apps.TasksConfig',
     'apps.documents.apps.DocumentsConfig',
     'apps.integrations.apps.IntegrationsConfig',
+    'apps.hospitality.apps.HospitalityConfig',
     'apps.reports.apps.ReportsConfig',
 ]
 
@@ -78,6 +79,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'common.middleware.RLSMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -131,6 +133,17 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Cloud file storage (S3 or Azure, configured via env)
+DEFAULT_FILE_STORAGE = os.environ.get('DEFAULT_FILE_STORAGE', 'django.core.files.storage.FileSystemStorage')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'af-south-1')
+AWS_S3_FILE_OVERWRITE = env_bool('AWS_S3_FILE_OVERWRITE', False)
+AWS_DEFAULT_ACL = os.environ.get('AWS_DEFAULT_ACL', 'private')
+AZURE_ACCOUNT_NAME = os.environ.get('AZURE_ACCOUNT_NAME', '')
+AZURE_ACCOUNT_KEY = os.environ.get('AZURE_ACCOUNT_KEY', '')
+AZURE_CONTAINER = os.environ.get('AZURE_CONTAINER', '')
+SIGNED_URL_EXPIRY_SECONDS = int(os.environ.get('SIGNED_URL_EXPIRY_SECONDS', '300'))
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -153,9 +166,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(
-        minutes=int(os.environ.get('JWT_ACCESS_TOKEN_MINUTES', '30'))
-    ),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.environ.get('JWT_ACCESS_TOKEN_MINUTES', '15'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(
         days=int(os.environ.get('JWT_REFRESH_TOKEN_DAYS', '1'))
     ),
@@ -165,10 +176,10 @@ SIMPLE_JWT = {
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 10 * 1024 * 1024))
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 10 * 1024 * 1024))
-STAGEOS_MAX_UPLOAD_BYTES = int(os.environ.get('STAGEOS_MAX_UPLOAD_BYTES', 25 * 1024 * 1024))
+STAGEOS_MAX_UPLOAD_BYTES = int(os.environ.get('STAGEOS_MAX_UPLOAD_BYTES', 20 * 1024 * 1024))
 STAGEOS_ALLOWED_UPLOAD_MIME_TYPES = env_list(
     'STAGEOS_ALLOWED_UPLOAD_MIME_TYPES',
-    'application/pdf,image/jpeg,image/png,text/csv,application/vnd.ms-excel',
+    'application/pdf,image/jpeg,image/png,image/webp,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 )
 
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')

@@ -38,5 +38,6 @@ urlpatterns = [
         path('governance/', include('apps.governance.urls')),
         path('reports/', include('apps.reports.urls')),
         path('integrations/', include('apps.integrations.urls')),
+        path('hospitality/', include('apps.hospitality.urls')),
     ])),
 ]

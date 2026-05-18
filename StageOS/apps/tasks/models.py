@@ -29,6 +29,13 @@ class NotificationType(models.TextChoices):
     DEPARTMENT_ISSUE = 'department_issue', 'Department Issue'
     EVIDENCE_REJECTED = 'evidence_rejected', 'Evidence Rejected'
     APPROVAL_DECIDED = 'approval_decided', 'Approval Decision'
+    TASK_OVERDUE = 'task_overdue', 'Task Overdue'
+    WORKFLOW_BLOCKED = 'workflow_blocked', 'Workflow Step Blocked'
+    EXECUTIVE_ACTION = 'executive_action', 'Executive Action'
+    CONTRACT_EXPIRING = 'contract_expiring', 'Contract Expiring'
+    SUPPLIER_DOC_REJECTED = 'supplier_doc_rejected', 'Supplier Document Rejected'
+    ARTIST_DOC_REJECTED = 'artist_doc_rejected', 'Artist Document Rejected'
+    YOUTH_CONSENT_EXPIRING = 'youth_consent_expiring', 'Youth Consent Expiring'
 
 
 class Task(TenantOwnedModel):
@@ -103,6 +110,8 @@ class Notification(TenantOwnedModel):
         'structure.Department', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='notifications',
     )
+    related_model = models.CharField(max_length=100, blank=True)
+    related_id = models.CharField(max_length=100, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

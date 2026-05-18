@@ -15,6 +15,7 @@ import {
   Settings,
   Ticket,
   Truck,
+  UtensilsCrossed,
   Users,
   Wrench,
 } from 'lucide-react';
@@ -78,8 +79,9 @@ const allItems = {
   suppliers:   { label: NAV_LABELS.suppliers,       href: '/suppliers',  icon: Truck },
   artists:     { label: NAV_LABELS.performers,      href: '/artists',    icon: Mic2 },
   ticketing:   { label: NAV_LABELS.boxOffice,       href: '/ticketing',  icon: Ticket },
-  youth:       { label: NAV_LABELS.youthProgrammes, href: '/youth',      icon: Handshake },
-  governance:  { label: NAV_LABELS.governance,      href: '/governance', icon: Scale },
+  youth:        { label: NAV_LABELS.youthProgrammes, href: '/youth',        icon: Handshake },
+  hospitality:  { label: 'Hospitality',              href: '/hospitality',  icon: UtensilsCrossed },
+  governance:   { label: NAV_LABELS.governance,      href: '/governance',   icon: Scale },
   documents:   { label: NAV_LABELS.files,           href: '/documents',  icon: FileText },
   tasks:       { label: NAV_LABELS.myWork,          href: '/tasks',      icon: ClipboardCheck },
   approvals:   { label: NAV_LABELS.signOff,         href: '/approvals',  icon: BadgeCheck },
@@ -97,7 +99,7 @@ function departmentItem(kind: DashboardKind) {
   if (kind === 'ticketing')   return allItems.ticketing;
   if (kind === 'youth')       return allItems.youth;
   if (kind === 'governance')  return allItems.governance;
-  if (kind === 'hospitality') return allItems.operations;
+  if (kind === 'hospitality') return allItems.hospitality;
   return allItems.programming;
 }
 
@@ -131,6 +133,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.operations,
           allItems.ticketing,
           allItems.youth,
+          allItems.hospitality,
         ],
       },
       {

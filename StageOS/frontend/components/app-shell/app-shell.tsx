@@ -42,6 +42,12 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
 
   return (
     <ProtectedRoute>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-md focus:bg-teal-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Skip to main content
+      </a>
       {/*
         Layout:
           [Sidebar (fixed left on mobile / static column on desktop)]
@@ -74,7 +80,7 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
           />
 
           {/* Scrollable page area */}
-          <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 md:px-8">
+          <main id="main-content" className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 md:px-8">
             <div className="mx-auto w-full max-w-[1500px]">{children}</div>
           </main>
         </div>

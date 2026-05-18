@@ -42,10 +42,21 @@ class DocumentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
+        from django.conf import settings as django_settings
         doc = self.get_object()
         if not doc.file:
             return Response({'detail': 'No stored file is available for this document.'}, status=status.HTTP_404_NOT_FOUND)
         record_document_download(doc, request.user)
+        # If using cloud storage, return a signed URL
+        storage_backend = getattr(django_settings, 'DEFAULT_FILE_STORAGE', 'django.core.files.storage.FileSystemStorage')
+        if storage_backend != 'django.core.files.storage.FileSystemStorage':
+            try:
+                expiry = getattr(django_settings, 'SIGNED_URL_EXPIRY_SECONDS', 300)
+                signed_url = doc.file.storage.url(doc.file.name)
+                return Response({'url': signed_url, 'expires_in': expiry})
+            except Exception:
+                pass
+        # Fallback to direct file serving
         return FileResponse(
             doc.file.open('rb'),
             as_attachment=True,

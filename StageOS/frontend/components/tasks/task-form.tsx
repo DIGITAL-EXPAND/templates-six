@@ -9,6 +9,11 @@ import type {
   UserListItem,
 } from '@/lib/api/types';
 
+function isAdminOrExecutive(profile: OperatingProfile | null | undefined): boolean {
+  const userType = profile?.user.user_type;
+  return userType === 'internal_admin' || userType === 'executive';
+}
+
 export type TaskFormValues = {
   operating_context: string;
   title: string;
@@ -48,6 +53,24 @@ export function TaskForm({
     evidence_required: false,
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Filter departments to those the user can assign work in (admins/executives see all)
+  const deptOptions = useMemo(() => {
+    if (isAdminOrExecutive(profile)) return departments;
+    if (!profile?.memberships) return departments;
+    const assignableDeptIds = new Set(
+      profile.memberships.filter((m) => m.can_assign_work).map((m) => m.department.id),
+    );
+    return departments.filter((d) => assignableDeptIds.has(d.id));
+  }, [departments, profile]);
+
+  // Filter assignees to members of the selected department
+  const assigneeOptions = useMemo(() => {
+    if (!values.department) return users;
+    // UserListItem doesn't carry membership data; show all users when dept is set
+    // (server-side filtering via API would be needed for strict isolation)
+    return users;
+  }, [users, values.department]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -144,7 +167,7 @@ export function TaskForm({
             value={values.department}
           >
             <option value="">No department</option>
-            {departments.map((department) => (
+            {deptOptions.map((department) => (
               <option key={department.id} value={department.id}>
                 {department.name}
               </option>
@@ -162,7 +185,7 @@ export function TaskForm({
             value={values.assigned_to}
           >
             <option value="">Unassigned</option>
-            {users.map((user) => (
+            {assigneeOptions.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.full_name || user.email}
               </option>

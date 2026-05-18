@@ -762,6 +762,15 @@ class EvidenceGapsReportView(APIView):
             step_template__requires_evidence=True,
             evidence_document__isnull=True,
         ).exclude(status__in=['completed', 'skipped']).select_related('workflow_instance__operating_context', 'step_template', 'assigned_to')
+        allowed = _get_allowed_dept_ids(request.user)
+        if allowed is not None:
+            task_gaps = task_gaps.filter(
+                Q(department_id__in=allowed) | Q(department__isnull=True)
+            )
+            process_gaps = process_gaps.filter(
+                Q(workflow_instance__operating_context__department_id__in=allowed)
+                | Q(workflow_instance__operating_context__department__isnull=True)
+            )
         rows = []
         for task in task_gaps:
             rows.append({
@@ -796,6 +805,11 @@ class CalendarIssuesReportView(APIView):
     def get(self, request):
         org = request.user.organisation
         issues = CalendarIssue.objects.filter(organisation=org).select_related('operating_context', 'department', 'raised_by')
+        allowed = _get_allowed_dept_ids(request.user)
+        if allowed is not None:
+            issues = issues.filter(
+                Q(department_id__in=allowed) | Q(department__isnull=True)
+            )
         open_issues = issues.exclude(status__in=['resolved', 'cancelled'])
         rows = [{
             'id': str(issue.id),

@@ -70,9 +70,9 @@ export default function WorkspacesPage() {
         <section className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-blue-700">Planning and delivery</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">Workspaces</h1>
+            <h1 className="mt-1 text-2xl font-bold text-slate-950 md:text-3xl">Shows & Events</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              Manage productions, venue bookings, youth projects, festivals and programmes from one place.
+              Manage shows, venue bookings, youth projects, festivals and programmes from one place.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -81,15 +81,15 @@ export default function WorkspacesPage() {
               href="/workspaces/create"
             >
               <Plus className="h-4 w-4" />
-              Create Workspace
+              Add Show or Event
             </Link>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
-                aria-label="Search Workspaces"
+                aria-label="Search Shows & Events"
                 className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 sm:w-72"
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search Workspaces"
+                placeholder="Search Shows & Events"
                 type="search"
                 value={query}
               />

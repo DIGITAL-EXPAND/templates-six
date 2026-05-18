@@ -64,6 +64,15 @@ def create_task(context, user, data):
     from .models import Task
     department = data.get('department')
     _require_assign_authority(user, department)
+    # Validate assignee is a member of the task's department
+    assigned_to = data.get('assigned_to')
+    if assigned_to and department and not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+        from apps.structure.models import UserDepartmentMembership
+        is_member = UserDepartmentMembership.objects.filter(
+            user=assigned_to, department=department
+        ).exists()
+        if not is_member:
+            raise DepartmentAuthorityRequired('The assignee must be a member of the specified department.')
     task = Task.objects.create(
         operating_context=context,
         organisation=context.organisation,
@@ -217,6 +226,14 @@ def start_task(task, user, comment=''):
 def assign_task(task, user, assigned_to=None, due_date=None, comment=''):
     if not _uses_legacy_internal_authority(user) and not department_permissions.can_assign_department_work(user, task.department):
         raise DepartmentAuthorityRequired('You cannot assign work for this department.')
+    # Validate new assignee is a member of the task's department
+    if assigned_to and task.department and not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+        from apps.structure.models import UserDepartmentMembership
+        is_member = UserDepartmentMembership.objects.filter(
+            user=assigned_to, department=task.department
+        ).exists()
+        if not is_member:
+            raise DepartmentAuthorityRequired('The assignee must be a member of the task\'s department.')
     old_assignee = str(task.assigned_to_id) if task.assigned_to_id else ''
     task.assigned_to = assigned_to
     if due_date is not None:

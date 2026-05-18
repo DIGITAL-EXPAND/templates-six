@@ -1,8 +1,11 @@
+from django.db import models as db_models
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.views import TenantScopedMixin
+from common.permissions import UserRoles, is_admin_user, user_type
+from apps.structure.models import UserDepartmentMembership
 from .models import ContractTemplate, ContractRecord, SignatureRecord
 from .serializers import (
     ContractTemplateSerializer, ContractRecordSerializer, SignatureRecordSerializer,
@@ -30,10 +33,32 @@ class ContractRecordViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'issued_date', 'value']
     ordering = ['-created_at']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if is_admin_user(user) or user_type(user) in {UserRoles.EXECUTIVE}:
+            return qs
+        dept_ids = list(
+            UserDepartmentMembership.objects.filter(user=user).values_list('department_id', flat=True)
+        )
+        return qs.filter(
+            db_models.Q(operating_context__department_id__in=dept_ids)
+            | db_models.Q(operating_context__department__isnull=True)
+        )
+
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
         vd = dict(serializer.validated_data)
         context_obj = vd.pop('operating_context')
-        contract = create_contract(context=context_obj, user=self.request.user, data=vd)
+        if not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+            if context_obj and context_obj.department_id:
+                is_member = UserDepartmentMembership.objects.filter(
+                    user=user, department_id=context_obj.department_id
+                ).exists()
+                if not is_member:
+                    raise PermissionDenied('You can only create contracts for your own department.')
+        contract = create_contract(context=context_obj, user=user, data=vd)
         serializer.instance = contract
 
     @action(detail=True, methods=['post'])

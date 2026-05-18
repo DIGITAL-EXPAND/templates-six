@@ -30,6 +30,7 @@ import {
   fetchEvidenceGapsReport,
   fetchExecutiveSummary,
   fetchOperatingContexts,
+  fetchOperatingProfile,
   fetchRiskRegister,
   fetchSupplierReadinessReport,
   fetchYouthProjects,
@@ -52,6 +53,8 @@ import type {
   YouthSummaryReport,
 } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { dashboardKind } from '@/lib/role-experience';
+import type { OperatingProfile } from '@/lib/api/types';
 
 type ActiveReport =
   | 'executive'
@@ -68,6 +71,7 @@ type ActiveReport =
 
 export default function ReportsPage() {
   const { tokens } = useAuth();
+  const [profile, setProfile] = useState<OperatingProfile | null>(null);
   const [summary, setSummary] = useState<ExecutiveSummary | null>(null);
   const [boardSummary, setBoardSummary] = useState<BoardSummaryReport | null>(null);
   const [riskReport, setRiskReport] = useState<RiskRegisterReport | null>(null);
@@ -105,6 +109,7 @@ export default function ReportsPage() {
       fetchDepartments(tokens.access),
       fetchYouthProjects(tokens.access),
       fetchAuditExport(tokens.access),
+      fetchOperatingProfile(tokens.access),
     ])
       .then(([
         summaryResult,
@@ -118,6 +123,7 @@ export default function ReportsPage() {
         departmentResult,
         youthProjectResult,
         auditResult,
+        profileResult,
       ]) => {
         if (!mounted) return;
         if (summaryResult.status === 'fulfilled') setSummary(summaryResult.value);
@@ -129,9 +135,23 @@ export default function ReportsPage() {
         if (evidenceResult.status === 'fulfilled') setEvidenceReport(evidenceResult.value);
         if (calendarResult.status === 'fulfilled') setCalendarReport(calendarResult.value);
         if (workspaceResult.status === 'fulfilled') setWorkspaces(workspaceResult.value.results);
-        if (departmentResult.status === 'fulfilled') setDepartments(departmentResult.value.results);
         if (youthProjectResult.status === 'fulfilled') setYouthProjects(youthProjectResult.value.results);
         if (auditResult.status === 'fulfilled') setAuditEvents(auditResult.value.results);
+        if (profileResult.status === 'fulfilled') setProfile(profileResult.value);
+
+        // Filter departments to user's own memberships unless admin/executive
+        if (departmentResult.status === 'fulfilled') {
+          const allDepts = departmentResult.value.results;
+          const resolvedProfile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+          const role = dashboardKind(resolvedProfile);
+          const isAdminLevel = role === 'admin' || role === 'executive';
+          if (isAdminLevel || !resolvedProfile?.memberships?.length) {
+            setDepartments(allDepts);
+          } else {
+            const memberDeptIds = new Set(resolvedProfile.memberships.map((m) => m.department.id));
+            setDepartments(allDepts.filter((d) => memberDeptIds.has(d.id)));
+          }
+        }
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -199,10 +219,10 @@ export default function ReportsPage() {
         {loading ? <LoadingState label="Loading reports" /> : (
           <>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <ReportCard access={summary ? 'ready' : 'restricted'} description="Leadership totals, risks, tasks, approvals, budgets, KPIs and openings." onOpen={() => setActive('executive')} title="Executive Summary" />
+              <ReportCard access={summary ? 'ready' : 'restricted'} description="Leadership totals, risks, tasks, approvals, budgets, KPIs and openings." onOpen={() => setActive('executive')} title="Organisation Overview" />
               <ReportCard access={boardSummary ? (boardSummary.board_ready ? 'ready' : 'attention_required') : 'restricted'} description="Board-ready pilot signal across readiness, risks, approvals, evidence and calendar issues." onOpen={() => setActive('board')} title="Board Summary" />
               <ReportCard access={workspaces.length ? 'ready' : 'empty'} description="Detailed readiness for a selected Workspace." onOpen={() => setActive('workspace')} title="Workspace Readiness" />
-              <ReportCard access={departments.length ? 'ready' : 'empty'} description="Department task, approval and risk readiness." onOpen={() => setActive('department')} title="Department Readiness" />
+              <ReportCard access={departments.length ? 'ready' : 'empty'} description="Department task, approval and risk readiness." onOpen={() => setActive('department')} title="Department Status Report" />
               <ReportCard access={riskReport ? 'ready' : 'restricted'} description="Tenant-scoped risk register with status, owner and mitigation." onOpen={() => setActive('risk')} title="Risk Register" />
               <ReportCard access={contractReport ? 'ready' : 'restricted'} description="Contract value, status and signature readiness." onOpen={() => setActive('contracts')} title="Contract Status" />
               <ReportCard access={supplierReport ? 'ready' : 'restricted'} description="Supplier CSD, document and engagement readiness." onOpen={() => setActive('suppliers')} title="Supplier Readiness" />

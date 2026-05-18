@@ -80,7 +80,7 @@ const allItems = {
   artists:     { label: NAV_LABELS.performers,      href: '/artists',    icon: Mic2 },
   ticketing:   { label: NAV_LABELS.boxOffice,       href: '/ticketing',  icon: Ticket },
   youth:        { label: NAV_LABELS.youthProgrammes, href: '/youth',        icon: Handshake },
-  hospitality:  { label: 'Hospitality',              href: '/hospitality',  icon: UtensilsCrossed },
+  hospitality:  { label: NAV_LABELS.hospitality,      href: '/hospitality',  icon: UtensilsCrossed },
   governance:   { label: NAV_LABELS.governance,      href: '/governance',   icon: Scale },
   documents:   { label: NAV_LABELS.files,           href: '/documents',  icon: FileText },
   tasks:       { label: NAV_LABELS.myWork,          href: '/tasks',      icon: ClipboardCheck },

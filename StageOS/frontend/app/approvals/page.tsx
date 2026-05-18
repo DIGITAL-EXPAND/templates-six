@@ -50,23 +50,30 @@ export default function ApprovalsPage() {
     }
     let mounted = true;
     Promise.all([
-      fetchApprovalRequests(tokens.access),
+      fetchOperatingProfile(tokens.access),
       fetchApprovalSteps(tokens.access),
       fetchOperatingContexts(tokens.access),
       fetchUsers(tokens.access),
       fetchDocuments(tokens.access),
-      fetchOperatingProfile(tokens.access),
     ])
-      .then(([approvalResponse, stepResponse, workspaceResponse, userResponse, documentResponse, profileResponse]) => {
+      .then(async ([profileResponse, stepResponse, workspaceResponse, userResponse, documentResponse]) => {
         if (!mounted) {
           return;
         }
-        setApprovals(approvalResponse.results);
+        setProfile(profileResponse);
         setSteps(stepResponse.results);
         setWorkspaces(workspaceResponse.results);
         setUsers(userResponse.results);
         setDocuments(documentResponse.results);
-        setProfile(profileResponse);
+
+        // Filter approvals to the user's primary department unless admin/executive
+        const role = dashboardKind(profileResponse);
+        const isAdminLevel = role === 'admin' || role === 'executive';
+        const deptId = profileResponse.primary_department?.id;
+        const approvalParams =
+          !isAdminLevel && deptId ? { department: deptId } : undefined;
+        const approvalResponse = await fetchApprovalRequests(tokens.access, approvalParams);
+        if (mounted) setApprovals(approvalResponse.results);
       })
       .catch((err) => {
         if (!mounted) {

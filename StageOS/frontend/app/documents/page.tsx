@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/app-shell/app-shell';
 import { DocumentForm, type DocumentFormValues } from '@/components/documents/document-form';
 import { DocumentList } from '@/components/documents/document-list';
@@ -34,6 +34,23 @@ import type {
 } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
 
+type DocumentCategory = 'all' | 'evidence' | 'contract' | 'report' | 'template';
+
+const CATEGORY_LABELS: Record<DocumentCategory, string> = {
+  all: 'All Files',
+  evidence: 'Evidence / Supporting Files',
+  contract: 'Contracts & Agreements',
+  report: 'Reports & Data',
+  template: 'Templates',
+};
+
+const CATEGORY_TYPES: Record<Exclude<DocumentCategory, 'all'>, string[]> = {
+  evidence: ['evidence', 'supporting_file', 'supporting'],
+  contract: ['contract', 'agreement', 'legal'],
+  report: ['report', 'data', 'export'],
+  template: ['template'],
+};
+
 export default function DocumentsPage() {
   const { tokens } = useAuth();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -46,6 +63,15 @@ export default function DocumentsPage() {
   const [error, setError] = useState('');
   const [acceptingId, setAcceptingId] = useState('');
   const [rejectingId, setRejectingId] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<DocumentCategory>('all');
+
+  const filteredDocuments = useMemo(() => {
+    if (categoryFilter === 'all') return documents;
+    const allowedTypes = CATEGORY_TYPES[categoryFilter];
+    return documents.filter((doc) =>
+      allowedTypes.some((t) => doc.document_type?.toLowerCase().includes(t)),
+    );
+  }, [documents, categoryFilter]);
 
   useEffect(() => {
     if (!tokens?.access) {
@@ -229,8 +255,27 @@ export default function DocumentsPage() {
               tasks={tasks}
               workspaces={workspaces}
             />
-            {documents.length ? (
-              <DocumentList documents={documents} onDownload={handleDownloadDocument} users={users} workspaces={workspaces} />
+
+            {/* Category filter bar */}
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(CATEGORY_LABELS) as DocumentCategory[]).map((cat) => (
+                <button
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                    categoryFilter === cat
+                      ? 'border-teal-600 bg-teal-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  type="button"
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+
+            {filteredDocuments.length ? (
+              <DocumentList documents={filteredDocuments} onDownload={handleDownloadDocument} users={users} workspaces={workspaces} />
             ) : (
               <EmptyState
                 description="Add document metadata first, then link it as evidence where needed."

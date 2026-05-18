@@ -79,8 +79,13 @@ class AuditEvent(models.Model):
         # Use a temporary save approach: save to get created_at, then update hash directly
         super().save(*args, **kwargs)
         self.record_hash = self.compute_hash(self.previous_hash)
-        # Use direct DB update to avoid triggering the immutability guard
-        AuditEvent.objects.filter(pk=self.pk).update(record_hash=self.record_hash)
+        # Bypass the immutability guard with raw SQL — only called from this save()
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'UPDATE audit_auditevent SET record_hash = %s WHERE id = %s',
+                [self.record_hash, str(self.id)],
+            )
 
     def delete(self, *args, **kwargs):
         raise ValidationError('AuditEvent records cannot be deleted.')

@@ -1,9 +1,12 @@
+from django.db import models as db_models
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.views import TenantScopedMixin
+from common.permissions import UserRoles, is_admin_user, user_type
 from apps.documents.models import Document
+from apps.structure.models import UserDepartmentMembership
 from .models import ApprovalRoute, ApprovalStep, ApprovalRequest, ApprovalDecision
 from .serializers import (
     ApprovalRouteSerializer, ApprovalStepSerializer,
@@ -36,6 +39,21 @@ class ApprovalRequestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [*TenantScopedMixin.permission_classes]
     filterset_fields = ['operating_context', 'approval_step', 'decision', 'requested_by']
     ordering = ['-requested_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if is_admin_user(user) or user_type(user) in {UserRoles.EXECUTIVE}:
+            return qs
+        # For managers: show approvals where they are the submitter or
+        # where their department is the approver department on the approval step
+        managed_depts = UserDepartmentMembership.objects.filter(
+            user=user, can_approve_work=True
+        ).values_list('department_id', flat=True)
+        return qs.filter(
+            db_models.Q(requested_by=user) |
+            db_models.Q(approval_step__approver_department_id__in=managed_depts)
+        ).distinct()
 
     def perform_create(self, serializer):
         vd = serializer.validated_data

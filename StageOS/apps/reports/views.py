@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.pagination import StandardPagination
-from common.permissions import CanAccessReports, CanAccessAudit
+from common.permissions import CanAccessReports, CanAccessAudit, UserRoles, is_admin_user, user_type
 from apps.audit.services import AuditService
 from apps.audit.models import AuditEvent
 from apps.contexts.models import OperatingContext
@@ -21,8 +21,15 @@ from apps.artists.models import ArtistEngagement
 from apps.approvals.models import ApprovalRequest
 from apps.governance.models import ExecutiveAction, KPI, Risk
 from apps.programming.models import CalendarIssue
-from apps.structure.models import Department
+from apps.structure.models import Department, UserDepartmentMembership
 from apps.workflows.models import WorkflowStepInstance
+
+
+def _get_allowed_dept_ids(user):
+    """Returns None (= all departments) for admins/executives, else user's dept IDs."""
+    if is_admin_user(user) or user_type(user) in {UserRoles.EXECUTIVE}:
+        return None
+    return list(UserDepartmentMembership.objects.filter(user=user).values_list('department_id', flat=True))
 
 
 class ExecutiveSummaryView(APIView):
@@ -425,7 +432,16 @@ class DepartmentReadinessView(APIView):
 
     @extend_schema(responses={'200': {'type': 'object'}})
     def get(self, request, department_id):
+        from rest_framework.exceptions import PermissionDenied
         org = request.user.organisation
+        user = request.user
+        # Admins and executives can view any department's readiness
+        if not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+            is_member = UserDepartmentMembership.objects.filter(
+                user=user, department_id=department_id
+            ).exists()
+            if not is_member:
+                raise PermissionDenied('You can only view readiness reports for your own department.')
         try:
             dept = Department.objects.get(id=department_id, organisation=org)
         except Department.DoesNotExist:
@@ -484,18 +500,30 @@ class YouthSummaryView(APIView):
 
     @extend_schema(responses={'200': {'type': 'object'}})
     def get(self, request, project_id):
+        from rest_framework.exceptions import PermissionDenied
         org = request.user.organisation
+        user = request.user
         from apps.youth.models import (
             YouthProject, AttendanceRecord, ConsentRecord,
             Session, FacilitatorAssignment, ShowcaseOutput, Assessment,
         )
         try:
-            yp = YouthProject.objects.select_related('operating_context').get(
+            yp = YouthProject.objects.select_related('operating_context__department').get(
                 id=project_id,
                 operating_context__organisation=org,
             )
         except YouthProject.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Non-admin/executive users must be members of the project's department
+        if not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+            ctx_dept = yp.operating_context.department_id
+            if ctx_dept:
+                is_member = UserDepartmentMembership.objects.filter(
+                    user=user, department_id=ctx_dept
+                ).exists()
+                if not is_member:
+                    raise PermissionDenied('You do not have access to this youth project summary.')
 
         # Learners: unique identifiers across attendance
         total_learners = AttendanceRecord.objects.filter(
@@ -588,6 +616,11 @@ class RiskRegisterView(APIView):
     def get(self, request):
         org = request.user.organisation
         risks = Risk.objects.filter(organisation=org).select_related('operating_context', 'owner')
+        allowed = _get_allowed_dept_ids(request.user)
+        if allowed is not None:
+            risks = risks.filter(
+                Q(operating_context__department_id__in=allowed) | Q(operating_context__department__isnull=True)
+            )
         rows = []
         by_level: dict = {}
         by_status: dict = {}
@@ -627,6 +660,11 @@ class ContractStatusReportView(APIView):
     def get(self, request):
         org = request.user.organisation
         contracts = ContractRecord.objects.filter(organisation=org).select_related('operating_context')
+        allowed = _get_allowed_dept_ids(request.user)
+        if allowed is not None:
+            contracts = contracts.filter(
+                Q(operating_context__department_id__in=allowed) | Q(operating_context__department__isnull=True)
+            )
         rows = []
         by_status: dict = {}
         total_value = Decimal('0')

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Paperclip, Send, X } from 'lucide-react';
 import {
   blockTask,
   completeTask,
   createTaskComment,
   fetchEvidence,
+  fetchOperatingProfile,
   fetchTaskComments,
   reopenTask,
   startTask,
@@ -15,6 +16,7 @@ import {
 } from '@/lib/api/endpoints';
 import type {
   EvidenceSubmissionItem,
+  OperatingProfile,
   TaskCommentItem,
   TaskItem,
 } from '@/lib/api/types';
@@ -153,10 +155,11 @@ function Avatar({ name }: { name: string }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function TaskPanel({ taskId, onClose, onTaskUpdate }: TaskPanelProps) {
-  const { tokens } = useAuth();
+  const { tokens, user } = useAuth();
   const token = tokens?.access ?? '';
 
   const [task, setTask] = useState<TaskItem | null>(null);
+  const [profile, setProfile] = useState<OperatingProfile | null>(null);
   const [comments, setComments] = useState<TaskCommentItem[]>([]);
   const [evidence, setEvidence] = useState<EvidenceSubmissionItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,6 +181,12 @@ export function TaskPanel({ taskId, onClose, onTaskUpdate }: TaskPanelProps) {
   const [uploadError, setUploadError] = useState('');
 
   const isOpen = taskId !== null;
+
+  // Fetch operating profile once on mount so we can compute permissions
+  useEffect(() => {
+    if (!token) return;
+    fetchOperatingProfile(token).then(setProfile).catch(() => {});
+  }, [token]);
 
   // Fetch task + comments + evidence whenever taskId changes
   useEffect(() => {
@@ -334,6 +343,23 @@ export function TaskPanel({ taskId, onClose, onTaskUpdate }: TaskPanelProps) {
   const hasAcceptedEvidence = evidence.some((e) => e.accepted);
   const canMarkDone = !task?.evidence_required || hasAcceptedEvidence;
   const overdue = task ? isOverdue(task) : false;
+
+  // Permission check: can the current user take action on this task?
+  const canActOnTask = useMemo(() => {
+    if (!task || !user) return false;
+    // Admins and executives can always act
+    if (user.user_type === 'internal_admin' || user.user_type === 'executive') return true;
+    // The assignee can act on their own task (assigned_to is the user id string)
+    if (task.assigned_to === user.id) return true;
+    // A department manager can act on tasks in their department
+    if (task.department && profile) {
+      const membershipForDept = profile.memberships.find(
+        (m) => m.department.id === task.department && m.can_manage_department,
+      );
+      if (membershipForDept) return true;
+    }
+    return false;
+  }, [task, user, profile]);
 
   // ── Work-type label ──────────────────────────────────────────────────────────
 
@@ -618,74 +644,82 @@ export function TaskPanel({ taskId, onClose, onTaskUpdate }: TaskPanelProps) {
               </p>
             ) : null}
 
-            <div className="flex flex-wrap items-center gap-2">
-              {task.status === 'open' ? (
-                <button
-                  className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                  disabled={actionLoading}
-                  onClick={handleStart}
-                  type="button"
-                >
-                  {actionLoading ? 'Starting…' : TASK_LABELS.actions.start}
-                </button>
-              ) : null}
+            {canActOnTask ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  {task.status === 'open' ? (
+                    <button
+                      className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                      disabled={actionLoading}
+                      onClick={handleStart}
+                      type="button"
+                    >
+                      {actionLoading ? 'Starting…' : TASK_LABELS.actions.start}
+                    </button>
+                  ) : null}
 
-              {task.status === 'in_progress' ? (
-                <>
-                  <button
-                    className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-60"
-                    disabled={actionLoading || !canMarkDone}
-                    onClick={handleComplete}
-                    title={!canMarkDone ? TASK_LABELS.evidenceRequired : undefined}
-                    type="button"
-                  >
-                    {actionLoading ? 'Saving…' : TASK_LABELS.actions.complete}
-                  </button>
-                  <button
-                    className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed"
-                    disabled={actionLoading}
-                    onClick={() => setShowBlockForm(true)}
-                    type="button"
-                  >
-                    {TASK_LABELS.actions.block}
-                  </button>
-                </>
-              ) : null}
+                  {task.status === 'in_progress' ? (
+                    <>
+                      <button
+                        className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-60"
+                        disabled={actionLoading || !canMarkDone}
+                        onClick={handleComplete}
+                        title={!canMarkDone ? TASK_LABELS.evidenceRequired : undefined}
+                        type="button"
+                      >
+                        {actionLoading ? 'Saving…' : TASK_LABELS.actions.complete}
+                      </button>
+                      <button
+                        className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed"
+                        disabled={actionLoading}
+                        onClick={() => setShowBlockForm(true)}
+                        type="button"
+                      >
+                        {TASK_LABELS.actions.block}
+                      </button>
+                    </>
+                  ) : null}
 
-              {task.status === 'blocked' ? (
-                <button
-                  className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                  disabled={actionLoading}
-                  onClick={handleStart}
-                  type="button"
-                >
-                  {actionLoading ? 'Saving…' : 'Start Working Again'}
-                </button>
-              ) : null}
+                  {task.status === 'blocked' ? (
+                    <button
+                      className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                      disabled={actionLoading}
+                      onClick={handleStart}
+                      type="button"
+                    >
+                      {actionLoading ? 'Saving…' : 'Start Working Again'}
+                    </button>
+                  ) : null}
 
-              {task.status === 'done' ? (
-                <button
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed"
-                  disabled={actionLoading}
-                  onClick={handleReopen}
-                  type="button"
-                >
-                  {actionLoading ? 'Saving…' : TASK_LABELS.actions.reopen}
-                </button>
-              ) : null}
-            </div>
+                  {task.status === 'done' ? (
+                    <button
+                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed"
+                      disabled={actionLoading}
+                      onClick={handleReopen}
+                      type="button"
+                    >
+                      {actionLoading ? 'Saving…' : TASK_LABELS.actions.reopen}
+                    </button>
+                  ) : null}
+                </div>
 
-            {task.status !== 'cancelled' && task.status !== 'done' ? (
-              <div className="mt-3 border-t border-gray-100 pt-3">
-                <button
-                  className="text-xs font-medium text-red-500 hover:text-red-700"
-                  onClick={onClose}
-                  type="button"
-                >
-                  {TASK_LABELS.actions.cancel}
-                </button>
-              </div>
-            ) : null}
+                {task.status !== 'cancelled' && task.status !== 'done' ? (
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <button
+                      className="text-xs font-medium text-red-500 hover:text-red-700"
+                      onClick={onClose}
+                      type="button"
+                    >
+                      {TASK_LABELS.actions.cancel}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-xs text-gray-400">
+                You are viewing this action — only the assignee or department manager can take action.
+              </p>
+            )}
           </div>
         ) : null}
       </aside>

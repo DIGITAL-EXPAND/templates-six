@@ -47,9 +47,32 @@ class TaskViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         ).distinct()
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
         vd = dict(serializer.validated_data)
+        user = self.request.user
+        dept = vd.get('department')
+        assigned_to = vd.get('assigned_to')
+
+        # Non-admin/executive must only create tasks in their own departments
+        if not is_admin_user(user) and user_type(user) not in {UserRoles.EXECUTIVE}:
+            manageable = [
+                m.department_id
+                for m in department_permissions.user_department_memberships(user)
+                if m.can_assign_work or m.can_manage_department
+            ]
+            if dept and dept.id not in manageable:
+                raise PermissionDenied('You can only assign work within your own department.')
+            # If assignee provided, verify they are in the task's department
+            if assigned_to and dept:
+                from apps.structure.models import UserDepartmentMembership
+                is_member = UserDepartmentMembership.objects.filter(
+                    user=assigned_to, department=dept
+                ).exists()
+                if not is_member:
+                    raise PermissionDenied('The selected person is not a member of this department.')
+
         context_obj = vd.pop('operating_context')
-        task = create_task(context=context_obj, user=self.request.user, data=vd)
+        task = create_task(context=context_obj, user=user, data=vd)
         serializer.instance = task
 
     @action(detail=True, methods=['post'])
@@ -76,6 +99,7 @@ class TaskViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def assign(self, request, pk=None):
+        from rest_framework.exceptions import PermissionDenied
         task = self.get_object()
         input_ser = AssignTaskSerializer(data=request.data)
         input_ser.is_valid(raise_exception=True)
@@ -83,6 +107,14 @@ class TaskViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         assignee = None
         if assignee_id:
             assignee = User.objects.get(id=assignee_id, organisation_id=request.user.organisation_id)
+            # Verify that the assignee is a member of the task's department
+            if task.department and not is_admin_user(request.user) and user_type(request.user) not in {UserRoles.EXECUTIVE}:
+                from apps.structure.models import UserDepartmentMembership
+                is_member = UserDepartmentMembership.objects.filter(
+                    user=assignee, department=task.department
+                ).exists()
+                if not is_member:
+                    raise PermissionDenied('The selected person is not a member of this department.')
         updated = assign_task(
             task,
             request.user,

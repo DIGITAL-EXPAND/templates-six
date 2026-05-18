@@ -1,9 +1,10 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import type {
   DepartmentListItem,
   OperatingContextListItem,
+  OperatingProfile,
   Priority,
   UserListItem,
 } from '@/lib/api/types';
@@ -24,12 +25,14 @@ export function TaskForm({
   workspaces,
   departments,
   users,
+  profile,
   defaultWorkspaceId = '',
   onSubmit,
 }: {
   workspaces: OperatingContextListItem[];
   departments: DepartmentListItem[];
   users: UserListItem[];
+  profile?: OperatingProfile | null;
   defaultWorkspaceId?: string;
   onSubmit: (values: TaskFormValues) => Promise<void>;
 }) {

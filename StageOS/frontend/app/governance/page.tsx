@@ -13,20 +13,105 @@ import { ErrorState, LoadingState, PermissionDeniedState } from '@/components/ui
 import { ApiError } from '@/lib/api/client';
 import {
   createExecutiveAction,
+  fetchCorrectiveActions,
   fetchDepartments,
   fetchExecutiveActions,
+  fetchKPIs,
   fetchOperatingContexts,
+  fetchRisks,
   fetchUsers,
   setExecutiveActionStatus,
 } from '@/lib/api/endpoints';
 import type {
+  CorrectiveActionItem,
   DepartmentListItem,
   ExecutiveActionItem,
   ExecutiveActionType,
+  KPIItem,
   OperatingContextListItem,
+  RiskItem,
   UserListItem,
 } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
+
+// ── KPI helpers ──────────────────────────────────────────────────────────────
+
+function kpiPct(kpi: KPIItem): number {
+  const target = parseFloat(kpi.target_value);
+  const actual = parseFloat(kpi.actual_value);
+  if (target <= 0) return 0;
+  return Math.min(100, (actual / target) * 100);
+}
+
+type Rag = 'green' | 'amber' | 'red';
+
+function ragStatus(pct: number): Rag {
+  if (pct >= 90) return 'green';
+  if (pct >= 60) return 'amber';
+  return 'red';
+}
+
+const RAG_COLOURS: Record<Rag, string> = {
+  green: 'bg-green-500',
+  amber: 'bg-amber-400',
+  red:   'bg-red-500',
+};
+
+const RAG_BADGE: Record<Rag, string> = {
+  green: 'bg-green-100 text-green-800',
+  amber: 'bg-amber-100 text-amber-800',
+  red:   'bg-red-100 text-red-700',
+};
+
+const RAG_LABEL: Record<Rag, string> = {
+  green: 'On Track',
+  amber: 'At Risk',
+  red:   'Off Track',
+};
+
+function KpiCard({ kpi }: { kpi: KPIItem }) {
+  const pct = kpiPct(kpi);
+  const rag = ragStatus(pct);
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm font-medium text-slate-800 leading-snug">{kpi.name}</span>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${RAG_BADGE[rag]}`}>
+          {RAG_LABEL[rag]}
+        </span>
+      </div>
+      <div className="mt-2 flex items-baseline gap-1 text-xs text-slate-500">
+        <span className="text-lg font-bold text-slate-900">{parseFloat(kpi.actual_value).toLocaleString()}</span>
+        <span>/</span>
+        <span>{parseFloat(kpi.target_value).toLocaleString()} {kpi.unit}</span>
+      </div>
+      {/* Progress bar */}
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-2 rounded-full transition-all ${RAG_COLOURS[rag]}`}
+          style={{ width: `${pct.toFixed(1)}%` }}
+        />
+      </div>
+      <div className="mt-1 text-right text-xs text-slate-400">{pct.toFixed(0)}%</div>
+      {kpi.reporting_period && (
+        <div className="mt-1 text-xs text-slate-400 capitalize">{kpi.reporting_period}</div>
+      )}
+    </article>
+  );
+}
+
+// ── Risk summary helpers ──────────────────────────────────────────────────────
+
+const RISK_LEVEL_ORDER = ['critical', 'high', 'medium', 'low'];
+
+const RISK_LEVEL_COLOURS: Record<string, string> = {
+  critical: 'bg-red-100 text-red-800',
+  high:     'bg-orange-100 text-orange-700',
+  medium:   'bg-amber-100 text-amber-700',
+  low:      'bg-green-100 text-green-700',
+};
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GovernancePage() {
   const { tokens } = useAuth();
@@ -34,6 +119,9 @@ export default function GovernancePage() {
   const [workspaces, setWorkspaces] = useState<OperatingContextListItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentListItem[]>([]);
   const [users, setUsers] = useState<UserListItem[]>([]);
+  const [kpis, setKpis] = useState<KPIItem[]>([]);
+  const [risks, setRisks] = useState<RiskItem[]>([]);
+  const [correctiveActions, setCorrectiveActions] = useState<CorrectiveActionItem[]>([]);
   const [actionType, setActionType] = useState<ExecutiveActionType>('request_change');
   const [title, setTitle] = useState('');
   const [reason, setReason] = useState('');
@@ -56,8 +144,11 @@ export default function GovernancePage() {
       fetchOperatingContexts(tokens.access),
       fetchDepartments(tokens.access),
       fetchUsers(tokens.access),
+      fetchKPIs(tokens.access),
+      fetchRisks(tokens.access),
+      fetchCorrectiveActions(tokens.access),
     ])
-      .then(([actionResult, workspaceResult, departmentResult, userResult]) => {
+      .then(([actionResult, workspaceResult, departmentResult, userResult, kpiResult, riskResult, caResult]) => {
         if (!mounted) return;
         if (actionResult.status === 'fulfilled') setActions(actionResult.value.results);
         else if (actionResult.reason instanceof ApiError && actionResult.reason.status === 403) setPermissionDenied(true);
@@ -65,6 +156,9 @@ export default function GovernancePage() {
         if (workspaceResult.status === 'fulfilled') setWorkspaces(workspaceResult.value.results);
         if (departmentResult.status === 'fulfilled') setDepartments(departmentResult.value.results);
         if (userResult.status === 'fulfilled') setUsers(userResult.value.results);
+        if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value.results);
+        if (riskResult.status === 'fulfilled') setRisks(riskResult.value.results);
+        if (caResult.status === 'fulfilled') setCorrectiveActions(caResult.value.results);
       })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
@@ -76,6 +170,40 @@ export default function GovernancePage() {
     highAuthority: actions.filter((action) => ['override', 'decline', 'escalate'].includes(action.action_type)).length,
     linkedWork: actions.filter((action) => action.linked_task || action.linked_risk || action.linked_corrective_action).length,
   }), [actions]);
+
+  // Group KPIs by department name (use owner_description as fallback)
+  const kpisByDept = useMemo(() => {
+    const map = new Map<string, KPIItem[]>();
+    for (const kpi of kpis.filter((k) => k.is_active)) {
+      const dept = departments.find((d) => d.id === kpi.owner_department);
+      const label = dept?.name ?? kpi.owner_description ?? 'General';
+      const existing = map.get(label) ?? [];
+      existing.push(kpi);
+      map.set(label, existing);
+    }
+    return map;
+  }, [kpis, departments]);
+
+  // Risk summary grouped by level and status
+  const riskSummary = useMemo(() => {
+    const byLevel: Record<string, { open: number; in_progress: number; mitigated: number }> = {};
+    for (const risk of risks) {
+      if (!byLevel[risk.risk_level]) {
+        byLevel[risk.risk_level] = { open: 0, in_progress: 0, mitigated: 0 };
+      }
+      if (risk.status === 'open') byLevel[risk.risk_level].open++;
+      else if (risk.status === 'in_progress') byLevel[risk.risk_level].in_progress++;
+      else if (risk.status === 'mitigated') byLevel[risk.risk_level].mitigated++;
+    }
+    return byLevel;
+  }, [risks]);
+
+  const overdueCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return correctiveActions.filter(
+      (ca) => ca.status !== 'completed' && ca.due_date && ca.due_date < today,
+    ).length;
+  }, [correctiveActions]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,12 +260,92 @@ export default function GovernancePage() {
         {error ? <ErrorState message={error} /> : null}
         {loading ? <LoadingState label="Loading executive actions" /> : (
           <>
+            {/* Executive action metrics */}
             <section className="grid gap-4 md:grid-cols-4">
               <Metric icon={ShieldAlert} label="Open" value={metrics.open} />
               <Metric icon={CheckCircle2} label="Acknowledged" value={metrics.acknowledged} />
               <Metric icon={Gavel} label="High authority" value={metrics.highAuthority} />
               <Metric icon={AlertTriangle} label="Linked work" value={metrics.linkedWork} />
             </section>
+
+            {/* KPI Dashboard */}
+            {kpis.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-base font-bold text-slate-950">KPI Dashboard</h2>
+                {Array.from(kpisByDept.entries()).map(([deptName, deptKpis]) => (
+                  <div key={deptName} className="mb-4">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{deptName}</h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {deptKpis.map((kpi) => <KpiCard key={kpi.id} kpi={kpi} />)}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {/* Risk Register Summary + Corrective Actions */}
+            {(risks.length > 0 || correctiveActions.length > 0) && (
+              <section className="grid gap-4 md:grid-cols-2">
+                {/* Risk register */}
+                {risks.length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-base font-bold text-slate-950">Risk Register</h2>
+                      <span className="text-xs text-slate-500">{risks.length} total</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          <th className="pb-2 text-left font-semibold text-slate-500 uppercase tracking-wide">Level</th>
+                          <th className="pb-2 text-center font-semibold text-slate-500 uppercase tracking-wide">Open</th>
+                          <th className="pb-2 text-center font-semibold text-slate-500 uppercase tracking-wide">In Progress</th>
+                          <th className="pb-2 text-center font-semibold text-slate-500 uppercase tracking-wide">Mitigated</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {RISK_LEVEL_ORDER.filter((level) => riskSummary[level]).map((level) => (
+                          <tr key={level} className="py-1">
+                            <td className="py-2">
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${RISK_LEVEL_COLOURS[level] ?? 'bg-slate-100 text-slate-700'}`}>
+                                {level}
+                              </span>
+                            </td>
+                            <td className="py-2 text-center font-medium text-red-600">{riskSummary[level].open}</td>
+                            <td className="py-2 text-center font-medium text-amber-600">{riskSummary[level].in_progress}</td>
+                            <td className="py-2 text-center font-medium text-green-600">{riskSummary[level].mitigated}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Corrective actions overdue */}
+                {correctiveActions.length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-white p-4 flex flex-col gap-3">
+                    <h2 className="text-base font-bold text-slate-950">Corrective Actions</h2>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-lg bg-red-50 border border-red-100 p-3 text-center">
+                        <div className="text-2xl font-bold text-red-700">{overdueCount}</div>
+                        <div className="text-xs text-red-500 mt-1">Overdue</div>
+                      </div>
+                      <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-center">
+                        <div className="text-2xl font-bold text-amber-700">
+                          {correctiveActions.filter((ca) => ca.status === 'in_progress').length}
+                        </div>
+                        <div className="text-xs text-amber-500 mt-1">In Progress</div>
+                      </div>
+                      <div className="rounded-lg bg-green-50 border border-green-100 p-3 text-center">
+                        <div className="text-2xl font-bold text-green-700">
+                          {correctiveActions.filter((ca) => ca.status === 'completed').length}
+                        </div>
+                        <div className="text-xs text-green-500 mt-1">Completed</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
 
             <section className="grid gap-5 xl:grid-cols-[0.85fr_1.4fr]">
               <form className="space-y-3 rounded-lg border border-slate-200 bg-white p-4" onSubmit={handleCreate}>

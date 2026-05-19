@@ -15,10 +15,13 @@ import {
   Mic2,
   Scale,
   Settings,
+  ShoppingCart,
   Ticket,
   Truck,
+  Users2,
   UtensilsCrossed,
   Users,
+  Wallet,
   Wrench,
 } from 'lucide-react';
 import type { OperatingProfile } from '@/lib/api/types';
@@ -92,6 +95,9 @@ const allItems = {
   settings:      { label: NAV_LABELS.settings,        href: '/settings',      icon: Settings },
   scorecard:     { label: 'Dept Scorecard',           href: '/scorecard',     icon: Activity },
   notifications: { label: 'Notifications',            href: '/notifications', icon: Bell },
+  budgets:       { label: 'Budget',                   href: '/governance/budget', icon: Wallet },
+  boardMeetings: { label: 'Board Meetings',           href: '/governance/board',  icon: Users2 },
+  procurement:   { label: 'Procurement',              href: '/suppliers/procurement', icon: ShoppingCart },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -142,7 +148,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.reports, allItems.audit, allItems.settings],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.reports, allItems.audit, allItems.settings],
       },
     ];
   }
@@ -156,6 +162,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.calendar,
           allItems.workspaces,
           allItems.governance,
+          allItems.budgets,
+          allItems.boardMeetings,
           allItems.reports,
           allItems.audit,
           allItems.tasks,
@@ -172,6 +180,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.dashboard,
           allItems.calendar,
           allItems.workspaces,
+          allItems.budgets,
+          allItems.procurement,
           allItems.reports,
           allItems.tasks,
         ],
@@ -204,21 +214,18 @@ export function navigationGroups(profile: OperatingProfile | null) {
   }
 
   if (authority === 'department_manager') {
-    return [
-      {
-        label: 'Department',
-        items: [
-          allItems.dashboard,
-          allItems.scorecard,
-          allItems.calendar,
-          allItems.workspaces,
-          departmentItem(kind),
-          allItems.tasks,
-          allItems.documents,
-          allItems.reports,
-        ],
-      },
+    const deptItems = [
+      allItems.dashboard,
+      allItems.scorecard,
+      allItems.calendar,
+      allItems.workspaces,
+      departmentItem(kind),
+      allItems.tasks,
+      allItems.documents,
+      allItems.reports,
     ];
+    if (kind === 'scm') deptItems.push(allItems.procurement);
+    return [{ label: 'Department', items: deptItems }];
   }
 
   return [

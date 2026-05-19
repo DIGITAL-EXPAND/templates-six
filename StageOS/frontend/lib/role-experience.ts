@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   ClipboardCheck,
+  CreditCard,
   FileText,
   Handshake,
   History,
@@ -13,6 +14,7 @@ import {
   Landmark,
   Megaphone,
   Mic2,
+  Receipt,
   Scale,
   Settings,
   ShoppingCart,
@@ -95,9 +97,11 @@ const allItems = {
   settings:      { label: NAV_LABELS.settings,        href: '/settings',      icon: Settings },
   scorecard:     { label: 'Dept Scorecard',           href: '/scorecard',     icon: Activity },
   notifications: { label: 'Notifications',            href: '/notifications', icon: Bell },
-  budgets:       { label: 'Budget',                   href: '/governance/budget', icon: Wallet },
-  boardMeetings: { label: 'Board Meetings',           href: '/governance/board',  icon: Users2 },
-  procurement:   { label: 'Procurement',              href: '/suppliers/procurement', icon: ShoppingCart },
+  budgets:       { label: 'Budget',                   href: '/governance/budget',         icon: Wallet },
+  boardMeetings: { label: 'Board Meetings',           href: '/governance/board',          icon: Users2 },
+  procurement:   { label: 'Procurement',              href: '/suppliers/procurement',     icon: ShoppingCart },
+  boxOffice:     { label: 'Box Office',               href: '/ticketing/bookings',        icon: CreditCard },
+  tillRecon:     { label: 'Till Recon',               href: '/ticketing/reconciliation',  icon: Receipt },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -225,6 +229,10 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.reports,
     ];
     if (kind === 'scm') deptItems.push(allItems.procurement);
+    // Ticketing managers get box office sub-pages
+    if (kind === 'ticketing') {
+      deptItems.splice(5, 0, allItems.boxOffice, allItems.tillRecon);
+    }
     return [{ label: 'Department', items: deptItems }];
   }
 

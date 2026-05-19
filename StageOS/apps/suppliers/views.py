@@ -1,15 +1,18 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from django.utils import timezone
 
 from common.views import TenantScopedMixin
 from common.permissions import (
     CanAccessSupplierData, CanAccessFinance, IsTenantMember, UserRoles, user_type,
 )
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder
 from .serializers import (
     SupplierSerializer, SupplierDocumentSerializer,
     SupplierEngagementSerializer, PaymentPackSerializer,
+    PurchaseRequisitionSerializer, PurchaseOrderSerializer,
 )
 from .services import (
     verify_supplier, send_payment_to_erp, upload_supplier_document,
@@ -93,3 +96,52 @@ class PaymentPackViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         pack = self.get_object()
         updated = send_payment_to_erp(pack, request.user)
         return Response(PaymentPackSerializer(updated, context={'request': request}).data)
+
+
+class PurchaseRequisitionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PurchaseRequisition.objects.select_related(
+        'operating_context', 'department', 'requested_by', 'approved_by',
+    )
+    serializer_class = PurchaseRequisitionSerializer
+    filterset_fields = ['status', 'operating_context', 'department', 'requested_by', 'currency']
+    search_fields = ['title', 'description', 'requisition_number']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        requisition = self.get_object()
+        requisition.status = 'approved'
+        requisition.approved_by = request.user
+        requisition.approved_at = timezone.now()
+        requisition.save(update_fields=['status', 'approved_by', 'approved_at'])
+        return Response(PurchaseRequisitionSerializer(requisition, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        requisition = self.get_object()
+        reason = request.data.get('reason', '')
+        if not reason.strip():
+            return Response(
+                {'reason': 'A rejection reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        requisition.status = 'rejected'
+        requisition.rejection_reason = reason
+        requisition.save(update_fields=['status', 'rejection_reason'])
+        return Response(PurchaseRequisitionSerializer(requisition, context={'request': request}).data)
+
+
+class PurchaseOrderViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PurchaseOrder.objects.select_related(
+        'requisition', 'supplier', 'operating_context',
+    )
+    serializer_class = PurchaseOrderSerializer
+    filterset_fields = ['status', 'supplier', 'operating_context', 'requisition', 'currency']
+    search_fields = ['po_number', 'description', 'invoice_number']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

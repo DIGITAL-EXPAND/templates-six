@@ -216,3 +216,173 @@ class ExecutiveAction(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.get_action_type_display()}: {self.title}'
+
+
+class BudgetStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    SUBMITTED = 'submitted', 'Submitted for Approval'
+    APPROVED = 'approved', 'Approved'
+    ACTIVE = 'active', 'Active'
+    CLOSED = 'closed', 'Closed'
+    REVISED = 'revised', 'Revised'
+
+
+class BudgetLineCategory(models.TextChoices):
+    INCOME = 'income', 'Income'
+    PERSONNEL = 'personnel', 'Personnel'
+    PRODUCTION = 'production', 'Production'
+    MARKETING = 'marketing', 'Marketing'
+    TECHNICAL = 'technical', 'Technical'
+    VENUE = 'venue', 'Venue & Facilities'
+    TRAVEL = 'travel', 'Travel & Accommodation'
+    ADMIN = 'admin', 'Administration'
+    CONTINGENCY = 'contingency', 'Contingency'
+    OTHER = 'other', 'Other'
+
+
+class Budget(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.OneToOneField(
+        'contexts.OperatingContext', on_delete=models.PROTECT, related_name='governance_budget',
+    )
+    name = models.CharField(max_length=255)
+    financial_year = models.CharField(max_length=9, blank=True)  # e.g. "2026/27"
+    status = models.CharField(max_length=20, choices=BudgetStatus.choices, default=BudgetStatus.DRAFT)
+    total_income = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_expenditure = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    approved_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='approved_budgets',
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Budget: {self.operating_context} [{self.status}]'
+
+    def recalculate_totals(self):
+        lines = self.lines.all()
+        self.total_income = sum(l.amount for l in lines if l.category == BudgetLineCategory.INCOME)
+        self.total_expenditure = sum(l.amount for l in lines if l.category != BudgetLineCategory.INCOME)
+        self.save(update_fields=['total_income', 'total_expenditure'])
+
+    @property
+    def net_position(self):
+        return self.total_income - self.total_expenditure
+
+
+class BudgetLine(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name='lines')
+    category = models.CharField(max_length=20, choices=BudgetLineCategory.choices)
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    actual_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    variance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['category', 'sort_order', 'description']
+
+    def save(self, *args, **kwargs):
+        self.amount = self.quantity * self.unit_cost
+        self.variance = self.amount - self.actual_amount
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.category}: {self.description} R{self.amount}'
+
+
+class BoardMeetingType(models.TextChoices):
+    ORDINARY = 'ordinary', 'Ordinary Board Meeting'
+    SPECIAL = 'special', 'Special Board Meeting'
+    COMMITTEE = 'committee', 'Committee Meeting'
+    AGM = 'agm', 'Annual General Meeting'
+    AUDIT_COMMITTEE = 'audit_committee', 'Audit Committee'
+    RISK_COMMITTEE = 'risk_committee', 'Risk & Governance Committee'
+
+
+class BoardMeetingStatus(models.TextChoices):
+    SCHEDULED = 'scheduled', 'Scheduled'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    CONCLUDED = 'concluded', 'Concluded'
+    CANCELLED = 'cancelled', 'Cancelled'
+    POSTPONED = 'postponed', 'Postponed'
+
+
+class ResolutionStatus(models.TextChoices):
+    PASSED = 'passed', 'Passed'
+    REJECTED = 'rejected', 'Rejected'
+    DEFERRED = 'deferred', 'Deferred'
+    WITHDRAWN = 'withdrawn', 'Withdrawn'
+
+
+class BoardMeeting(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting_type = models.CharField(max_length=20, choices=BoardMeetingType.choices, default=BoardMeetingType.ORDINARY)
+    title = models.CharField(max_length=255)
+    meeting_date = models.DateField()
+    venue = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=BoardMeetingStatus.choices, default=BoardMeetingStatus.SCHEDULED)
+    quorum_required = models.PositiveIntegerField(default=0)
+    quorum_achieved = models.BooleanField(default=False)
+    members_present = models.PositiveIntegerField(default=0)
+    apologies = models.TextField(blank=True)
+    agenda_document = models.ForeignKey(
+        'documents.Document', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='agenda_meetings',
+    )
+    minutes_document = models.ForeignKey(
+        'documents.Document', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='minutes_meetings',
+    )
+    chaired_by = models.CharField(max_length=255, blank=True)
+    minuted_by = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-meeting_date']
+
+    def __str__(self):
+        return f'{self.title} — {self.meeting_date}'
+
+
+class BoardResolution(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting = models.ForeignKey(BoardMeeting, on_delete=models.CASCADE, related_name='resolutions')
+    resolution_number = models.CharField(max_length=50, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=ResolutionStatus.choices, default=ResolutionStatus.PASSED)
+    proposed_by = models.CharField(max_length=255, blank=True)
+    seconded_by = models.CharField(max_length=255, blank=True)
+    votes_for = models.PositiveIntegerField(default=0)
+    votes_against = models.PositiveIntegerField(default=0)
+    votes_abstained = models.PositiveIntegerField(default=0)
+    action_required = models.TextField(blank=True)
+    action_owner = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='resolution_actions',
+    )
+    action_due_date = models.DateField(null=True, blank=True)
+    action_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['resolution_number', 'created_at']
+
+    def __str__(self):
+        return f'{self.resolution_number}: {self.title} [{self.status}]'

@@ -79,6 +79,24 @@ import type {
   YouthProjectItem,
   YouthProjectStats,
   YouthSessionItem,
+  BookingItem,
+  CreateBookingPayload,
+  PriceCategoryItem,
+  CreatePriceCategoryPayload,
+  TillReconciliationItem,
+  CreateTillReconciliationPayload,
+  BudgetItem,
+  BudgetLineItem,
+  CreateBudgetLinePayload,
+  BoardMeetingItem,
+  CreateBoardMeetingPayload,
+  BoardResolutionItem,
+  PurchaseRequisitionItem,
+  CreatePurchaseRequisitionPayload,
+  PurchaseOrderItem,
+  KPIItem,
+  RiskItem,
+  CorrectiveActionItem,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -962,6 +980,27 @@ export function fetchAuditEvents(token: string, params?: Record<string, string |
   });
 }
 
+export function fetchKPIs(token: string, params?: Record<string, string | boolean | null | undefined>) {
+  return apiRequest<PaginatedResponse<KPIItem>>(`/api/v1/governance/kpis/${queryString(params)}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export function fetchRisks(token: string, params?: Record<string, string | boolean | null | undefined>) {
+  return apiRequest<PaginatedResponse<RiskItem>>(`/api/v1/governance/risks/${queryString(params)}`, {
+    method: 'GET',
+    token,
+  });
+}
+
+export function fetchCorrectiveActions(token: string, params?: Record<string, string | boolean | null | undefined>) {
+  return apiRequest<PaginatedResponse<CorrectiveActionItem>>(`/api/v1/governance/corrective-actions/${queryString(params)}`, {
+    method: 'GET',
+    token,
+  });
+}
+
 export function uploadDocumentFile(
   token: string,
   payload: {
@@ -1226,4 +1265,82 @@ export function reopenTask(token: string, taskId: string, comment = '') {
     token,
     body: { comment },
   });
+}
+
+// Bookings
+export function fetchBookings(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<BookingItem>>(`/api/v1/ticketing/bookings/${queryString(params)}`, { token });
+}
+
+export function createBooking(token: string, data: CreateBookingPayload) {
+  return apiRequest<BookingItem>('/api/v1/ticketing/bookings/', { method: 'POST', token, body: data });
+}
+
+// Price categories
+export function fetchPriceCategories(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<PriceCategoryItem>>(`/api/v1/ticketing/price-categories/${queryString(params)}`, { token });
+}
+
+export function createPriceCategory(token: string, data: CreatePriceCategoryPayload) {
+  return apiRequest<PriceCategoryItem>('/api/v1/ticketing/price-categories/', { method: 'POST', token, body: data });
+}
+
+// Till reconciliations
+export function fetchTillReconciliations(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<TillReconciliationItem>>(`/api/v1/ticketing/till-reconciliations/${queryString(params)}`, { token });
+}
+
+export function createTillReconciliation(token: string, data: CreateTillReconciliationPayload) {
+  return apiRequest<TillReconciliationItem>('/api/v1/ticketing/till-reconciliations/', { method: 'POST', token, body: data });
+}
+
+// Budget
+export function fetchBudgets(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<BudgetItem>>(`/api/v1/budgets/${queryString(params)}`, { token });
+}
+
+export function fetchBudgetLines(token: string, budgetId: string) {
+  return apiRequest<PaginatedResponse<BudgetLineItem>>(`/api/v1/budget-lines/?budget=${budgetId}`, { token });
+}
+
+export function createBudgetLine(token: string, data: CreateBudgetLinePayload) {
+  return apiRequest<BudgetLineItem>('/api/v1/budget-lines/', { method: 'POST', token, body: data });
+}
+
+export function approveBudget(token: string, budgetId: string) {
+  return apiRequest<BudgetItem>(`/api/v1/budgets/${budgetId}/approve/`, { method: 'POST', token });
+}
+
+// Board meetings
+export function fetchBoardMeetings(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<BoardMeetingItem>>(`/api/v1/board-meetings/${queryString(params)}`, { token });
+}
+
+export function createBoardMeeting(token: string, data: CreateBoardMeetingPayload) {
+  return apiRequest<BoardMeetingItem>('/api/v1/board-meetings/', { method: 'POST', token, body: data });
+}
+
+export function fetchBoardResolutions(token: string, meetingId: string) {
+  return apiRequest<PaginatedResponse<BoardResolutionItem>>(`/api/v1/board-resolutions/?meeting=${meetingId}`, { token });
+}
+
+// Procurement
+export function fetchPurchaseRequisitions(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<PurchaseRequisitionItem>>(`/api/v1/requisitions/${queryString(params)}`, { token });
+}
+
+export function createPurchaseRequisition(token: string, data: CreatePurchaseRequisitionPayload) {
+  return apiRequest<PurchaseRequisitionItem>('/api/v1/requisitions/', { method: 'POST', token, body: data });
+}
+
+export function approvePurchaseRequisition(token: string, id: string) {
+  return apiRequest<PurchaseRequisitionItem>(`/api/v1/requisitions/${id}/approve/`, { method: 'POST', token });
+}
+
+export function rejectPurchaseRequisition(token: string, id: string, reason: string) {
+  return apiRequest<PurchaseRequisitionItem>(`/api/v1/requisitions/${id}/reject/`, { method: 'POST', token, body: { reason } });
+}
+
+export function fetchPurchaseOrders(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<PurchaseOrderItem>>(`/api/v1/purchase-orders/${queryString(params)}`, { token });
 }

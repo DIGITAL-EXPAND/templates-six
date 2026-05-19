@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_non_negative
-from .models import KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction
+from .models import (
+    KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction,
+    Budget, BudgetLine, BoardMeeting, BoardResolution,
+)
 
 
 class KPISerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -147,3 +150,90 @@ class ExecutiveActionSerializer(ProtectedFieldsMixin, serializers.ModelSerialize
 
 class ExecutiveActionStatusSerializer(serializers.Serializer):
     comment = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class BudgetLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BudgetLine
+        fields = [
+            'id', 'budget', 'category', 'description',
+            'quantity', 'unit_cost', 'amount',
+            'actual_amount', 'variance', 'notes', 'sort_order',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'amount', 'variance', 'created_at', 'updated_at']
+
+    def validate_budget(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Budget')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        require_non_negative(attrs, ['quantity', 'unit_cost', 'actual_amount'])
+        return attrs
+
+
+class BudgetSerializer(serializers.ModelSerializer):
+    lines = BudgetLineSerializer(many=True, read_only=True)
+    net_position = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Budget
+        fields = [
+            'id', 'operating_context', 'name', 'financial_year', 'status',
+            'total_income', 'total_expenditure', 'net_position',
+            'approved_by', 'approved_at', 'notes',
+            'created_at', 'updated_at', 'lines',
+        ]
+        read_only_fields = [
+            'id', 'total_income', 'total_expenditure', 'net_position',
+            'approved_by', 'approved_at', 'created_at', 'updated_at',
+        ]
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+
+class BoardResolutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BoardResolution
+        fields = [
+            'id', 'meeting', 'resolution_number', 'title', 'description',
+            'status', 'proposed_by', 'seconded_by',
+            'votes_for', 'votes_against', 'votes_abstained',
+            'action_required', 'action_owner', 'action_due_date', 'action_completed',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_meeting(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Board meeting')
+
+    def validate_action_owner(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Action owner')
+
+
+class BoardMeetingSerializer(serializers.ModelSerializer):
+    resolutions = BoardResolutionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = BoardMeeting
+        fields = [
+            'id', 'meeting_type', 'title', 'meeting_date', 'venue', 'status',
+            'quorum_required', 'quorum_achieved', 'members_present', 'apologies',
+            'agenda_document', 'minutes_document',
+            'chaired_by', 'minuted_by', 'notes',
+            'created_at', 'updated_at', 'resolutions',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_agenda_document(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Agenda document')
+
+    def validate_minutes_document(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Minutes document')

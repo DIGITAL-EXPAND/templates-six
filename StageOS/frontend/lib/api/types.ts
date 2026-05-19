@@ -1329,3 +1329,257 @@ export type Scorecard = {
   unread_notifications: number;
   departments: ScorecardDepartment[];
 };
+
+export type PriceCategoryItem = {
+  id: string;
+  ticketing_setup: string;
+  name: string;
+  price: string;
+  is_comp: boolean;
+  sort_order: number;
+};
+
+export type CreatePriceCategoryPayload = {
+  ticketing_setup: string;
+  name: string;
+  price: string;
+  is_comp?: boolean;
+  sort_order?: number;
+};
+
+export type BookingItem = {
+  id: string;
+  ticketing_setup: string;
+  performance: string | null;
+  booking_reference: string;
+  patron_name: string;
+  patron_email: string;
+  patron_phone: string;
+  channel: string;
+  total_amount: string;
+  is_group_booking: boolean;
+  group_name: string;
+  notes: string;
+  booked_at: string;
+  updated_at: string;
+  tickets: TicketItem[];
+};
+
+export type TicketItem = {
+  id: string;
+  booking: string;
+  price_category: string | null;
+  seat_reference: string;
+  status: string;
+  amount: string;
+  checked_in: boolean;
+  checked_in_at: string | null;
+  created_at: string;
+};
+
+export type CreateBookingPayload = {
+  ticketing_setup: string;
+  patron_name: string;
+  patron_email?: string;
+  patron_phone?: string;
+  channel: string;
+  total_amount: string;
+  booking_reference: string;
+  notes?: string;
+};
+
+export type TillReconciliationItem = {
+  id: string;
+  ticketing_setup: string;
+  performance: string | null;
+  recon_date: string;
+  cash_counted: string;
+  card_total: string;
+  system_total: string;
+  variance: string;
+  variance_explained: string;
+  signed_off_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateTillReconciliationPayload = {
+  ticketing_setup: string;
+  recon_date: string;
+  cash_counted: string;
+  card_total: string;
+  system_total: string;
+  variance: string;
+  variance_explained?: string;
+  signed_off_by: string;
+};
+
+export type BudgetLineItem = {
+  id: string;
+  budget: string;
+  category: string;
+  description: string;
+  quantity: string;
+  unit_cost: string;
+  amount: string;
+  actual_amount: string;
+  variance: string;
+  notes: string;
+  sort_order: number;
+};
+
+export type CreateBudgetLinePayload = {
+  budget: string;
+  category: string;
+  description: string;
+  quantity: string;
+  unit_cost: string;
+  actual_amount?: string;
+  notes?: string;
+};
+
+export type BudgetItem = {
+  id: string;
+  operating_context: string;
+  name: string;
+  financial_year: string;
+  status: string;
+  total_income: string;
+  total_expenditure: string;
+  net_position: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BoardMeetingItem = {
+  id: string;
+  meeting_type: string;
+  title: string;
+  meeting_date: string;
+  venue: string;
+  status: string;
+  quorum_required: number;
+  quorum_achieved: boolean;
+  members_present: number;
+  chaired_by: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateBoardMeetingPayload = {
+  meeting_type: string;
+  title: string;
+  meeting_date: string;
+  venue?: string;
+  quorum_required?: number;
+  chaired_by?: string;
+  notes?: string;
+};
+
+export type BoardResolutionItem = {
+  id: string;
+  meeting: string;
+  resolution_number: string;
+  title: string;
+  description: string;
+  status: string;
+  proposed_by: string;
+  votes_for: number;
+  votes_against: number;
+  votes_abstained: number;
+  action_required: string;
+  action_completed: boolean;
+  action_due_date: string | null;
+};
+
+export type PurchaseRequisitionItem = {
+  id: string;
+  operating_context: string;
+  requisition_number: string;
+  title: string;
+  description: string;
+  department: string | null;
+  estimated_value: string;
+  currency: string;
+  required_by_date: string | null;
+  status: string;
+  requested_by: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string;
+  notes: string;
+  created_at: string;
+};
+
+export type CreatePurchaseRequisitionPayload = {
+  operating_context: string;
+  title: string;
+  description?: string;
+  estimated_value: string;
+  required_by_date?: string;
+  notes?: string;
+};
+
+export type PurchaseOrderItem = {
+  id: string;
+  po_number: string;
+  supplier: string;
+  operating_context: string;
+  description: string;
+  value: string;
+  currency: string;
+  status: string;
+  issued_date: string | null;
+  delivery_date: string | null;
+  actual_delivery_date: string | null;
+  invoice_number: string;
+  invoice_amount: string;
+  three_quotes_obtained: boolean;
+  csd_verified: boolean;
+  notes: string;
+  created_at: string;
+};
+
+export type KPIItem = {
+  id: string;
+  name: string;
+  owner_department: string | null;
+  owner_description: string;
+  target_value: string;
+  actual_value: string;
+  unit: string;
+  evidence_description: string;
+  reporting_period: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RiskItem = {
+  id: string;
+  operating_context: string | null;
+  title: string;
+  description: string;
+  risk_level: string;
+  owner: string;
+  status: string;
+  mitigation_plan: string;
+  raised_date: string;
+  closed_date: string | null;
+  updated_at: string;
+};
+
+export type CorrectiveActionItem = {
+  id: string;
+  risk: string;
+  action: string;
+  owner: string;
+  due_date: string | null;
+  status: string;
+  completed_date: string | null;
+  updated_at: string;
+};

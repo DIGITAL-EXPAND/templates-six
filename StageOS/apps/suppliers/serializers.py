@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_non_negative
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder
 
 
 class SupplierSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -96,4 +96,69 @@ class PaymentPackSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
                 'Payment pack operating context must match the supplier engagement context.'
             )
         require_non_negative(attrs, ['amount'])
+        return attrs
+
+
+class PurchaseRequisitionSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
+    protected_fields = ('status', 'approved_by', 'approved_at', 'rejection_reason')
+
+    class Meta:
+        model = PurchaseRequisition
+        fields = [
+            'id', 'operating_context', 'requisition_number', 'title', 'description',
+            'department', 'estimated_value', 'currency', 'required_by_date',
+            'status', 'requested_by', 'approved_by', 'approved_at',
+            'rejection_reason', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'status', 'approved_by', 'approved_at', 'rejection_reason',
+            'created_at', 'updated_at',
+        ]
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_department(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Department')
+
+    def validate_requested_by(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Requested by')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        require_non_negative(attrs, ['estimated_value'])
+        return attrs
+
+
+class PurchaseOrderSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
+    protected_fields = ('status',)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'requisition', 'supplier', 'operating_context',
+            'po_number', 'description', 'value', 'currency', 'status',
+            'issued_date', 'delivery_date', 'actual_delivery_date',
+            'invoice_number', 'invoice_date', 'invoice_amount', 'payment_date',
+            'three_quotes_obtained', 'csd_verified', 'notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_requisition(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Purchase requisition')
+
+    def validate_supplier(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Supplier')
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        require_non_negative(attrs, ['value', 'invoice_amount'])
         return attrs

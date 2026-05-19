@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,12 +7,14 @@ from common.permissions import CanCreateExecutiveIntervention
 from common.views import TenantScopedMixin
 from apps.contexts.models import OperatingContext
 from apps.documents.models import Document
-from .models import KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction
+from .models import KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction, Budget, BudgetLine, BoardMeeting, BoardResolution
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
     KPISerializer, KPIEvidenceSerializer, ReportKPISerializer,
     RiskSerializer, CloseRiskSerializer,
     CorrectiveActionSerializer,
+    BudgetSerializer, BudgetLineSerializer,
+    BoardMeetingSerializer, BoardResolutionSerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -157,3 +160,63 @@ class ExecutiveActionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         input_ser.is_valid(raise_exception=True)
         updated = service(action_obj, request.user, input_ser.validated_data.get('comment', ''))
         return Response(ExecutiveActionSerializer(updated, context={'request': request}).data)
+
+
+class BudgetViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Budget.objects.select_related('operating_context', 'approved_by').prefetch_related('lines')
+    serializer_class = BudgetSerializer
+    filterset_fields = ['status', 'operating_context', 'financial_year']
+    search_fields = ['name', 'financial_year', 'notes']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        budget = self.get_object()
+        budget.status = 'approved'
+        budget.approved_by = request.user
+        budget.approved_at = timezone.now()
+        budget.save(update_fields=['status', 'approved_by', 'approved_at'])
+        return Response(BudgetSerializer(budget, context={'request': request}).data)
+
+
+class BudgetLineViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = BudgetLine.objects.select_related('budget')
+    serializer_class = BudgetLineSerializer
+    filterset_fields = ['budget', 'category']
+    search_fields = ['description', 'notes']
+    ordering = ['category', 'sort_order', 'description']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class BoardMeetingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = BoardMeeting.objects.select_related('agenda_document', 'minutes_document').prefetch_related('resolutions')
+    serializer_class = BoardMeetingSerializer
+    filterset_fields = ['meeting_type', 'status', 'meeting_date']
+    search_fields = ['title', 'venue', 'chaired_by', 'minuted_by']
+    ordering = ['-meeting_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def conclude(self, request, pk=None):
+        meeting = self.get_object()
+        meeting.status = 'concluded'
+        meeting.save(update_fields=['status'])
+        return Response(BoardMeetingSerializer(meeting, context={'request': request}).data)
+
+
+class BoardResolutionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = BoardResolution.objects.select_related('meeting', 'action_owner')
+    serializer_class = BoardResolutionSerializer
+    filterset_fields = ['meeting', 'status', 'action_completed']
+    search_fields = ['title', 'description', 'resolution_number', 'proposed_by']
+    ordering = ['resolution_number', 'created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

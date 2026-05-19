@@ -161,3 +161,98 @@ class PaymentPack(TenantOwnedModel):
 
     def __str__(self):
         return f'Payment {self.erp_reference or self.id} [{self.status}]'
+
+
+class RequisitionStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    SUBMITTED = 'submitted', 'Submitted'
+    APPROVED = 'approved', 'Approved'
+    REJECTED = 'rejected', 'Rejected'
+    PO_ISSUED = 'po_issued', 'PO Issued'
+    CANCELLED = 'cancelled', 'Cancelled'
+
+
+class PurchaseOrderStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    ISSUED = 'issued', 'Issued'
+    PARTIALLY_DELIVERED = 'partially_delivered', 'Partially Delivered'
+    DELIVERED = 'delivered', 'Delivered'
+    INVOICED = 'invoiced', 'Invoiced'
+    PAID = 'paid', 'Paid'
+    CANCELLED = 'cancelled', 'Cancelled'
+    DISPUTED = 'disputed', 'Disputed'
+
+
+class PurchaseRequisition(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.PROTECT,
+        related_name='purchase_requisitions',
+    )
+    requisition_number = models.CharField(max_length=50, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    department = models.ForeignKey(
+        'structure.Department', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='purchase_requisitions',
+    )
+    estimated_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default='ZAR')
+    required_by_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=RequisitionStatus.choices, default=RequisitionStatus.DRAFT)
+    requested_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='purchase_requisitions',
+    )
+    approved_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='approved_requisitions',
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'PR-{self.requisition_number or self.id}: {self.title} [{self.status}]'
+
+
+class PurchaseOrder(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    requisition = models.ForeignKey(
+        PurchaseRequisition, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='purchase_orders',
+    )
+    supplier = models.ForeignKey(
+        Supplier, on_delete=models.PROTECT, related_name='purchase_orders',
+    )
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.PROTECT,
+        related_name='purchase_orders',
+    )
+    po_number = models.CharField(max_length=50, blank=True)
+    description = models.TextField(blank=True)
+    value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default='ZAR')
+    status = models.CharField(max_length=30, choices=PurchaseOrderStatus.choices, default=PurchaseOrderStatus.DRAFT)
+    issued_date = models.DateField(null=True, blank=True)
+    delivery_date = models.DateField(null=True, blank=True)
+    actual_delivery_date = models.DateField(null=True, blank=True)
+    invoice_number = models.CharField(max_length=100, blank=True)
+    invoice_date = models.DateField(null=True, blank=True)
+    invoice_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_date = models.DateField(null=True, blank=True)
+    three_quotes_obtained = models.BooleanField(default=False)
+    csd_verified = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'PO-{self.po_number or self.id}: {self.supplier} [{self.status}]'

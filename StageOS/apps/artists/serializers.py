@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_non_negative
-from .models import Artist, ArtistDocument, ArtistEngagement
+from .models import Artist, ArtistDocument, ArtistEngagement, ArtistPayment, PaymentStatus
 
 
 class ArtistSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -70,3 +70,17 @@ class ArtistEngagementSerializer(ProtectedFieldsMixin, serializers.ModelSerializ
                 )
         require_non_negative(attrs, ['fee'])
         return attrs
+
+
+class ArtistPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArtistPayment
+        fields = [
+            'id', 'engagement', 'milestone', 'amount', 'status',
+            'due_date', 'invoice_number', 'paid_date', 'approved_by',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'approved_by', 'created_at', 'updated_at']
+
+    def validate_engagement(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Engagement')

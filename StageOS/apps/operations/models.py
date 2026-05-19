@@ -178,3 +178,57 @@ class PostShowReport(TenantOwnedModel):
 
     def __str__(self):
         return f'Post-Show: {self.operating_context} on {self.show_date}'
+
+
+class StaffCallRole(models.TextChoices):
+    STAGE_MANAGER = 'stage_manager', 'Stage Manager'
+    DEPUTY_SM = 'deputy_sm', 'Deputy Stage Manager'
+    LIGHTING_OP = 'lighting_op', 'Lighting Operator'
+    SOUND_OP = 'sound_op', 'Sound Operator'
+    FOLLOW_SPOT = 'follow_spot', 'Follow Spot Operator'
+    FLY_OP = 'fly_op', 'Fly Operator'
+    HEAD_OF_WARDROBE = 'head_of_wardrobe', 'Head of Wardrobe'
+    WARDROBE_ASSISTANT = 'wardrobe_assistant', 'Wardrobe Assistant'
+    HEAD_USHER = 'head_usher', 'Head Usher'
+    USHER = 'usher', 'Usher'
+    BOX_OFFICE = 'box_office', 'Box Office'
+    SECURITY = 'security', 'Security'
+    FRONT_OF_HOUSE_MANAGER = 'foh_manager', 'Front of House Manager'
+    PRODUCTION_MANAGER = 'production_manager', 'Production Manager'
+    OTHER = 'other', 'Other'
+
+
+class StaffCallStatus(models.TextChoices):
+    SCHEDULED = 'scheduled', 'Scheduled'
+    CONFIRMED = 'confirmed', 'Confirmed'
+    COMPLETED = 'completed', 'Completed'
+    CANCELLED = 'cancelled', 'Cancelled'
+    NO_SHOW = 'no_show', 'No Show'
+
+
+class StaffCall(TenantOwnedModel):
+    """Individual staff member assignment to a performance or show call."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    show_call = models.ForeignKey(
+        ShowCall, on_delete=models.CASCADE, related_name='staff_calls',
+    )
+    staff_member = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='staff_calls',
+    )
+    role = models.CharField(max_length=30, choices=StaffCallRole.choices)
+    call_time = models.TimeField()
+    finish_time = models.TimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=StaffCallStatus.choices, default=StaffCallStatus.SCHEDULED,
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['call_time', 'role']
+        unique_together = [('show_call', 'staff_member', 'role')]
+
+    def __str__(self):
+        return f'{self.staff_member} as {self.get_role_display()} @ {self.call_time}'

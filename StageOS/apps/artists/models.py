@@ -115,3 +115,46 @@ class ArtistEngagement(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.artist} as {self.role} on {self.operating_context}'
+
+
+class PaymentMilestone(models.TextChoices):
+    DEPOSIT = 'deposit', 'Deposit (50% on signing)'
+    BALANCE = 'balance', 'Balance (before performance)'
+    FINAL = 'final', 'Final (post-performance)'
+    FULL = 'full', 'Full (single payment)'
+
+
+class PaymentStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    INVOICE_RECEIVED = 'invoice_received', 'Invoice Received'
+    APPROVED = 'approved', 'Approved for Payment'
+    PAID = 'paid', 'Paid'
+    DISPUTED = 'disputed', 'Disputed'
+
+
+class ArtistPayment(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    engagement = models.ForeignKey(
+        ArtistEngagement, on_delete=models.CASCADE, related_name='payments',
+    )
+    milestone = models.CharField(max_length=20, choices=PaymentMilestone.choices)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
+    )
+    due_date = models.DateField(null=True, blank=True)
+    invoice_number = models.CharField(max_length=100, blank=True)
+    paid_date = models.DateField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='approved_artist_payments',
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['due_date', 'created_at']
+
+    def __str__(self):
+        return f'{self.engagement} — {self.get_milestone_display()} [{self.status}]'

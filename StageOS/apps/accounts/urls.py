@@ -7,6 +7,7 @@ from .views import (
     MyNavigationView,
     MyOperatingProfileView,
     MyPermissionsView,
+    MyScorecardView,
     POPIAConsentView,
     POPIAErasureRequestView,
     POPIAMyDataView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path('me/permissions/', MyPermissionsView.as_view(), name='me-permissions'),
     path('me/dashboard/', MyDashboardView.as_view(), name='me-dashboard'),
     path('me/navigation/', MyNavigationView.as_view(), name='me-navigation'),
+    path('me/scorecard/', MyScorecardView.as_view(), name='me-scorecard'),
     path('users/', UserListCreateView.as_view(), name='user-list'),
     # Invite system
     path('invite/', InviteUserView.as_view(), name='invite-user'),

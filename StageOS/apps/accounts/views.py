@@ -1,5 +1,7 @@
 import uuid as uuid_lib
+from datetime import timedelta
 
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -116,6 +118,108 @@ class MyDashboardView(APIView):
         else:
             kind = 'generic'
         return Response({'dashboard_kind': kind, 'profile': profile})
+
+
+class MyScorecardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        today = timezone.now().date()
+        thirty_days = today + timedelta(days=30)
+
+        # Get user's department memberships
+        from apps.structure.models import UserDepartmentMembership
+        memberships = UserDepartmentMembership.objects.filter(user=user).select_related('department')
+        dept_ids = list(memberships.values_list('department_id', flat=True))
+        org_id = user.organisation_id
+
+        # Tasks metrics
+        from apps.tasks.models import Task
+        my_tasks = Task.objects.filter(organisation_id=org_id, assigned_to=user)
+        dept_tasks = Task.objects.filter(organisation_id=org_id, department__in=dept_ids)
+
+        tasks_data = {
+            'my_open': my_tasks.filter(status='open').count(),
+            'my_in_progress': my_tasks.filter(status='in_progress').count(),
+            'my_overdue': my_tasks.filter(status__in=['open', 'in_progress'], due_date__lt=today).count(),
+            'dept_open': dept_tasks.filter(status='open').count(),
+            'dept_in_progress': dept_tasks.filter(status='in_progress').count(),
+            'dept_overdue': dept_tasks.filter(status__in=['open', 'in_progress'], due_date__lt=today).count(),
+        }
+
+        # Approvals pending (submitted by user, not yet decided)
+        from apps.approvals.models import ApprovalRequest
+        pending_approvals = ApprovalRequest.objects.filter(
+            organisation_id=org_id,
+            decision='pending',
+            requested_by=user,
+        ).count()
+
+        # Contracts expiring in 30 days
+        from apps.contracts.models import ContractRecord
+        contracts_expiring = ContractRecord.objects.filter(
+            organisation_id=org_id,
+            expiry_date__lte=thirty_days,
+            expiry_date__gte=today,
+            status__in=['signed', 'counter_signed'],
+        ).count()
+
+        # Upcoming shows (from programming if available)
+        upcoming_shows = []
+        try:
+            from apps.programming.models import Show
+            shows_qs = Show.objects.filter(
+                organisation_id=org_id,
+                status__in=['confirmed', 'on_sale', 'running'],
+            ).select_related('operating_context').order_by('created_at')[:5]
+            upcoming_shows = [
+                {
+                    'id': str(s.id),
+                    'title': s.title,
+                    'status': s.status,
+                    'operating_context': str(s.operating_context_id),
+                }
+                for s in shows_qs
+            ]
+        except Exception:
+            pass
+
+        # Active operating contexts
+        from apps.contexts.models import OperatingContext
+        active_contexts = OperatingContext.objects.filter(
+            organisation_id=org_id,
+            status__in=['confirmed', 'in_production', 'in_delivery'],
+        ).count()
+
+        # Notifications unread (read_at is null means unread)
+        unread_notifications = 0
+        try:
+            from apps.tasks.models import Notification
+            unread_notifications = Notification.objects.filter(
+                organisation_id=org_id,
+                recipient=user,
+                read_at__isnull=True,
+            ).count()
+        except Exception:
+            pass
+
+        return Response({
+            'tasks': tasks_data,
+            'pending_approvals': pending_approvals,
+            'contracts_expiring_30d': contracts_expiring,
+            'active_contexts': active_contexts,
+            'upcoming_shows': upcoming_shows,
+            'unread_notifications': unread_notifications,
+            'departments': [
+                {
+                    'id': str(m.department_id),
+                    'name': m.department.name,
+                    'is_manager': m.can_manage_department,
+                }
+                for m in memberships
+            ],
+        })
 
 
 class UserListCreateView(TenantScopedMixin, generics.ListCreateAPIView):

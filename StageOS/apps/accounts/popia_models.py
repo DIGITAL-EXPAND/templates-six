@@ -29,7 +29,7 @@ class DataConsent(TenantOwnedModel):
     consent_date = models.DateTimeField(null=True, blank=True)
     consent_document = models.ForeignKey(
         'documents.Document', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='consent_records',
+        null=True, blank=True, related_name='popia_consent_records',
     )
     withdrawal_date = models.DateTimeField(null=True, blank=True)
     retention_until = models.DateField(null=True, blank=True)

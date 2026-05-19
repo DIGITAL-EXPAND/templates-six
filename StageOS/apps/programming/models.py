@@ -291,3 +291,111 @@ class CalendarIssue(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.title} [{self.status}]'
+
+
+class ShowStatus(models.TextChoices):
+    PROGRAMMING = 'programming', 'In Programming'
+    CONFIRMED = 'confirmed', 'Confirmed'
+    ON_SALE = 'on_sale', 'On Sale'
+    RUNNING = 'running', 'Running'
+    CLOSED = 'closed', 'Closed'
+    CANCELLED = 'cancelled', 'Cancelled'
+
+
+class Season(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organisation = models.ForeignKey(
+        'organisations.Organisation', on_delete=models.CASCADE, related_name='seasons',
+    )
+    name = models.CharField(max_length=255)
+    year = models.IntegerField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-year', 'name']
+        unique_together = [('organisation', 'name', 'year')]
+
+    def __str__(self):
+        return f'{self.name} ({self.year})'
+
+
+class Show(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.OneToOneField(
+        'contexts.OperatingContext', on_delete=models.PROTECT, related_name='show',
+    )
+    season = models.ForeignKey(
+        Season, on_delete=models.SET_NULL, null=True, blank=True, related_name='shows',
+    )
+    title = models.CharField(max_length=255)
+    subtitle = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=ShowStatus.choices, default=ShowStatus.PROGRAMMING)
+    genre = models.CharField(max_length=100, blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    interval_count = models.PositiveIntegerField(default=0)
+    age_restriction = models.CharField(max_length=50, blank=True)
+    content_advisory = models.TextField(blank=True)
+    synopsis = models.TextField(blank=True)
+    producer_name = models.CharField(max_length=255, blank=True)
+    is_own_production = models.BooleanField(default=False)
+    is_co_production = models.BooleanField(default=False)
+    budget_approved = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    revenue_target = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.title} [{self.status}]'
+
+
+class Performance(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    show = models.ForeignKey(Show, on_delete=models.CASCADE, related_name='performances')
+    venue = models.ForeignKey(
+        'structure.Venue', on_delete=models.PROTECT, related_name='performances',
+    )
+    space = models.ForeignKey(
+        'structure.Space', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='performances',
+    )
+    performance_date = models.DateField()
+    start_time = models.TimeField()
+    doors_time = models.TimeField(null=True, blank=True)
+    capacity = models.PositiveIntegerField(null=True, blank=True)
+    is_cancelled = models.BooleanField(default=False)
+    cancellation_reason = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['performance_date', 'start_time']
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.pk is None:  # only on create
+            overlapping = Performance.objects.filter(
+                venue=self.venue,
+                performance_date=self.performance_date,
+                is_cancelled=False,
+            ).exclude(pk=self.pk)
+            if self.space:
+                overlapping = overlapping.filter(space=self.space)
+            for other in overlapping:
+                # simple time overlap check
+                if not (self.start_time >= other.start_time and
+                        self.start_time >= other.start_time):
+                    raise ValidationError(
+                        f'Double-booking conflict with {other.show.title} at {other.start_time}'
+                    )
+
+    def __str__(self):
+        return f'{self.show.title} — {self.performance_date} {self.start_time}'

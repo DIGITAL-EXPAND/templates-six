@@ -116,3 +116,39 @@ class SignatureRecord(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.signatory_name} ({self.signatory_role}) — {"signed" if self.is_signed else "pending"}'
+
+
+class ObligationStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    COMPLETED = 'completed', 'Completed'
+    OVERDUE = 'overdue', 'Overdue'
+    WAIVED = 'waived', 'Waived'
+
+
+class ContractObligation(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    contract = models.ForeignKey(
+        ContractRecord, on_delete=models.CASCADE, related_name='obligations',
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    obligated_party = models.CharField(max_length=255)
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=ObligationStatus.choices, default=ObligationStatus.PENDING,
+    )
+    owner = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='contract_obligations',
+    )
+    completion_note = models.TextField(blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['due_date', 'title']
+
+    def __str__(self):
+        return f'{self.title} [{self.status}]'

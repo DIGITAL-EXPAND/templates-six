@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -36,3 +36,43 @@ class AuditVerifyView(TenantScopedMixin, APIView):
             expected_previous = event.record_hash
 
         return Response({'valid': True, 'checked': len(events)})
+
+
+class NotificationListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from apps.tasks.models import Notification
+        return Notification.objects.filter(
+            organisation_id=self.request.user.organisation_id,
+            recipient=self.request.user,
+        )
+
+    def get_serializer_class(self):
+        from apps.tasks.models import Notification
+
+        class NotificationSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = Notification
+                fields = ['id', 'message', 'notification_type', 'title', 'related_id', 'read_at', 'created_at']
+
+        return NotificationSerializer
+
+
+class NotificationMarkReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from apps.tasks.models import Notification
+        from django.utils import timezone
+        try:
+            notif = Notification.objects.get(
+                id=pk,
+                recipient=request.user,
+                organisation_id=request.user.organisation_id,
+            )
+            notif.read_at = timezone.now()
+            notif.save(update_fields=['read_at'])
+            return Response({'status': 'marked read'})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Not found'}, status=404)

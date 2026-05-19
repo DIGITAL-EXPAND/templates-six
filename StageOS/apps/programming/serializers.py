@@ -4,6 +4,7 @@ from common.serializers import check_tenant_fk, validate_unique_context, Protect
 from .models import (
     CalendarIssue, IntakeRequest, IntakeRequestStatus, IntakeRequestType,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
+    Season, Show, Performance,
 )
 
 
@@ -189,3 +190,52 @@ class CalendarIssueSerializer(ProtectedFieldsMixin, serializers.ModelSerializer)
 
 class CalendarIssueActionSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class SeasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Season
+        fields = [
+            'id', 'organisation', 'name', 'year', 'start_date', 'end_date',
+            'is_active', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'organisation', 'created_at', 'updated_at']
+
+
+class ShowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Show
+        fields = [
+            'id', 'operating_context', 'season', 'title', 'subtitle', 'status',
+            'genre', 'duration_minutes', 'interval_count', 'age_restriction',
+            'content_advisory', 'synopsis', 'producer_name', 'is_own_production',
+            'is_co_production', 'budget_approved', 'revenue_target',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_season(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Season')
+
+
+class PerformanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Performance
+        fields = [
+            'id', 'show', 'venue', 'space', 'performance_date', 'start_time',
+            'doors_time', 'capacity', 'is_cancelled', 'cancellation_reason',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_show(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Show')
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_space(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Space')

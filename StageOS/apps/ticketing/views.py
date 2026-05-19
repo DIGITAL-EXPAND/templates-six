@@ -1,13 +1,14 @@
-from rest_framework import viewsets, mixins, status
+from rest_framework import permissions, viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.views import TenantScopedMixin
 from apps.documents.models import Document
-from .models import TicketingSetup, SalesImport
+from .models import TicketingSetup, SalesImport, PriceCategory, Booking, Ticket, TillReconciliation
 from .serializers import (
     TicketingSetupSerializer, SalesImportSerializer,
     ImportSalesSerializer, SettleSerializer,
+    PriceCategorySerializer, BookingSerializer, TicketSerializer, TillReconciliationSerializer,
 )
 from .services import create_ticketing_setup, go_live, import_sales, settle_ticketing
 
@@ -69,3 +70,56 @@ class SalesImportViewSet(TenantScopedMixin, mixins.ListModelMixin, mixins.Retrie
     http_method_names = ['get', 'head', 'options']
     filterset_fields = ['ticketing_setup']
     ordering = ['-import_date']
+
+
+class PriceCategoryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PriceCategory.objects.select_related('ticketing_setup')
+    serializer_class = PriceCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['ticketing_setup', 'is_comp']
+    ordering_fields = ['sort_order', 'name']
+    ordering = ['sort_order', 'name']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+
+class BookingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Booking.objects.select_related('ticketing_setup', 'performance').prefetch_related('tickets')
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['ticketing_setup', 'performance', 'channel', 'is_group_booking']
+    search_fields = ['booking_reference', 'patron_name', 'patron_email', 'group_name']
+    ordering_fields = ['booked_at', 'patron_name', 'total_amount']
+    ordering = ['-booked_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+
+class TicketViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Ticket.objects.select_related('booking', 'price_category')
+    serializer_class = TicketSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['booking', 'status', 'checked_in', 'price_category']
+    ordering_fields = ['seat_reference', 'created_at']
+    ordering = ['seat_reference']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+
+class TillReconciliationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = TillReconciliation.objects.select_related('ticketing_setup', 'performance', 'signed_off_by')
+    serializer_class = TillReconciliationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['ticketing_setup', 'performance', 'recon_date']
+    ordering_fields = ['recon_date', 'created_at']
+    ordering = ['-recon_date']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)

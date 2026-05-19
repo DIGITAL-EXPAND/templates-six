@@ -71,3 +71,5 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'.strip() or self.email
+
+from .popia_models import DataConsent  # noqa: F401 - ensures Django tracks this model

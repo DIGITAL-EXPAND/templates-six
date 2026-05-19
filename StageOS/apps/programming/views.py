@@ -6,12 +6,14 @@ from common.permissions import CanAccessPrivateIntake, IsTenantMember, UserRoles
 from .models import (
     CalendarIssue, CalendarIssueStatus, IntakeRequest, IntakeRequestStatus,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
+    Season, Show, Performance,
 )
 from .serializers import (
     CalendarIssueActionSerializer, CalendarIssueSerializer,
     IntakeConvertSerializer, IntakeDecisionSerializer, IntakeRequestSerializer,
     IntakeReviewSerializer, ProducerAssignmentSerializer,
     VenueHoldSerializer, CalendarSlotSerializer,
+    SeasonSerializer, ShowSerializer, PerformanceSerializer,
 )
 from .services import (
     assign_producer, change_calendar_issue_status, convert_intake_to_context,
@@ -216,3 +218,47 @@ class CalendarIssueViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             serializer.validated_data.get('note', ''),
         )
         return Response(CalendarIssueSerializer(updated, context={'request': request}).data)
+
+
+class SeasonViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Season.objects.select_related('organisation')
+    serializer_class = SeasonSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['organisation', 'year', 'is_active']
+    search_fields = ['name']
+    ordering_fields = ['year', 'name']
+    ordering = ['-year', 'name']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+    def perform_create(self, serializer):
+        serializer.save(organisation=self.request.user.organisation)
+
+
+class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Show.objects.select_related('operating_context', 'season')
+    serializer_class = ShowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['operating_context', 'season', 'status', 'genre']
+    search_fields = ['title', 'subtitle', 'synopsis', 'producer_name']
+    ordering_fields = ['created_at', 'title', 'status']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+
+class PerformanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Performance.objects.select_related('show', 'venue', 'space')
+    serializer_class = PerformanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['show', 'venue', 'space', 'performance_date', 'is_cancelled']
+    ordering_fields = ['performance_date', 'start_time']
+    ordering = ['performance_date', 'start_time']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from common.serializers import (
     check_tenant_fk, ProtectedFieldsMixin, require_non_negative, require_ordered_dates,
 )
-from .models import ContractTemplate, ContractRecord, SignatureRecord
+from .models import ContractTemplate, ContractRecord, SignatureRecord, ContractObligation
 
 
 class ContractTemplateSerializer(serializers.ModelSerializer):
@@ -57,6 +57,20 @@ class SignatureRecordSerializer(ProtectedFieldsMixin, serializers.ModelSerialize
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'signed_at', 'is_signed', 'created_at', 'updated_at']
+
+    def validate_contract(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Contract')
+
+
+class ContractObligationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContractObligation
+        fields = [
+            'id', 'contract', 'title', 'description', 'obligated_party',
+            'due_date', 'status', 'owner', 'completion_note', 'completed_at',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'completed_at', 'created_at', 'updated_at']
 
     def validate_contract(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Contract')

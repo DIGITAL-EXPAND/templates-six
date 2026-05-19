@@ -1,14 +1,15 @@
 from django.db import models as db_models
-from rest_framework import viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.views import TenantScopedMixin
 from common.permissions import UserRoles, is_admin_user, user_type
 from apps.structure.models import UserDepartmentMembership
-from .models import ContractTemplate, ContractRecord, SignatureRecord
+from .models import ContractTemplate, ContractRecord, SignatureRecord, ContractObligation
 from .serializers import (
     ContractTemplateSerializer, ContractRecordSerializer, SignatureRecordSerializer,
+    ContractObligationSerializer,
 )
 from .services import (
     create_contract, issue_contract, record_signature, submit_for_review,
@@ -96,3 +97,17 @@ class SignatureRecordViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         sig = self.get_object()
         updated = record_signature(sig, request.user)
         return Response(SignatureRecordSerializer(updated, context={'request': request}).data)
+
+
+class ContractObligationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ContractObligation.objects.select_related('contract', 'owner')
+    serializer_class = ContractObligationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['contract', 'status', 'due_date']
+    search_fields = ['title', 'description', 'obligated_party']
+    ordering_fields = ['due_date', 'title', 'created_at']
+    ordering = ['due_date', 'title']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)

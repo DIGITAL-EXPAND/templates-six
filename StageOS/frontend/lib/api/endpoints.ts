@@ -48,6 +48,7 @@ import type {
   ModuleActivationItem,
   NotificationItem,
   PositionItem,
+  Scorecard,
   SignatureRecordItem,
   SupplierDocumentItem,
   SupplierEngagementItem,
@@ -456,6 +457,13 @@ export function blockTask(token: string, taskId: string, comment: string) {
   });
 }
 
+export function fetchScorecard(token: string) {
+  return apiRequest<Scorecard>('/api/v1/me/scorecard/', {
+    method: 'GET',
+    token,
+  });
+}
+
 export function fetchNotifications(token: string) {
   return apiRequest<PaginatedResponse<NotificationItem>>('/api/v1/notifications/', {
     method: 'GET',
@@ -464,7 +472,7 @@ export function fetchNotifications(token: string) {
 }
 
 export function markNotificationRead(token: string, notificationId: string) {
-  return apiRequest<NotificationItem>(`/api/v1/notifications/${notificationId}/mark_read/`, {
+  return apiRequest<NotificationItem>(`/api/v1/notifications/${notificationId}/read/`, {
     method: 'POST',
     token,
   });

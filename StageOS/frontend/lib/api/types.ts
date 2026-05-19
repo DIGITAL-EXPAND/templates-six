@@ -1297,3 +1297,35 @@ export type CreateTaskCommentPayload = {
   task: string;
   body: string;
 };
+
+export type ScorecardTasks = {
+  my_open: number;
+  my_in_progress: number;
+  my_overdue: number;
+  dept_open: number;
+  dept_in_progress: number;
+  dept_overdue: number;
+};
+
+export type ScorecardDepartment = {
+  id: string;
+  name: string;
+  is_manager: boolean;
+};
+
+export type ScorecardShow = {
+  id: string;
+  title: string;
+  status: string;
+  operating_context: string;
+};
+
+export type Scorecard = {
+  tasks: ScorecardTasks;
+  pending_approvals: number;
+  contracts_expiring_30d: number;
+  active_contexts: number;
+  upcoming_shows: ScorecardShow[];
+  unread_notifications: number;
+  departments: ScorecardDepartment[];
+};

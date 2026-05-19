@@ -1,6 +1,8 @@
 import {
+  Activity,
   BadgeCheck,
   BarChart3,
+  Bell,
   BriefcaseBusiness,
   CalendarClock,
   ClipboardCheck,
@@ -85,9 +87,11 @@ const allItems = {
   documents:   { label: NAV_LABELS.files,           href: '/documents',  icon: FileText },
   tasks:       { label: NAV_LABELS.myWork,          href: '/tasks',      icon: ClipboardCheck },
   approvals:   { label: NAV_LABELS.signOff,         href: '/approvals',  icon: BadgeCheck },
-  reports:     { label: NAV_LABELS.reports,         href: '/reports',    icon: BarChart3 },
-  audit:       { label: NAV_LABELS.activityLog,     href: '/audit',      icon: History },
-  settings:    { label: NAV_LABELS.settings,        href: '/settings',   icon: Settings },
+  reports:       { label: NAV_LABELS.reports,         href: '/reports',       icon: BarChart3 },
+  audit:         { label: NAV_LABELS.activityLog,     href: '/audit',         icon: History },
+  settings:      { label: NAV_LABELS.settings,        href: '/settings',      icon: Settings },
+  scorecard:     { label: 'Dept Scorecard',           href: '/scorecard',     icon: Activity },
+  notifications: { label: 'Notifications',            href: '/notifications', icon: Bell },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -205,6 +209,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
         label: 'Department',
         items: [
           allItems.dashboard,
+          allItems.scorecard,
           allItems.calendar,
           allItems.workspaces,
           departmentItem(kind),
@@ -219,7 +224,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
   return [
     {
       label: 'My Work',
-      items: [allItems.dashboard, allItems.tasks, allItems.documents],
+      items: [allItems.dashboard, allItems.tasks, allItems.documents, allItems.notifications],
     },
   ];
 }

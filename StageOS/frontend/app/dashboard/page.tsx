@@ -10,6 +10,7 @@ import {
   CircleDot,
   ClipboardList,
   FileSignature,
+  TrendingUp,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell/app-shell';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
@@ -20,6 +21,7 @@ import {
   fetchExecutiveSummary,
   fetchNotifications,
   fetchOperatingProfile,
+  fetchScorecard,
   fetchTasks,
 } from '@/lib/api/endpoints';
 import type {
@@ -28,6 +30,7 @@ import type {
   NotificationItem,
   OperatingContextListItem,
   OperatingProfile,
+  Scorecard,
   TaskItem,
 } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -332,6 +335,56 @@ function ExecutiveSummaryDashboard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SCORECARD PANEL (manager quick view on dashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function DashboardScorecardPanel({ scorecard }: { scorecard: Scorecard }) {
+  const { tasks, contracts_expiring_30d, upcoming_shows } = scorecard;
+  const hasIssues = tasks.dept_overdue > 0 || contracts_expiring_30d > 0;
+
+  if (!hasIssues && upcoming_shows.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader title="Department Health" />
+      <div className="divide-y divide-gray-50 px-5 py-2">
+        {tasks.dept_overdue > 0 && (
+          <div className="flex items-center justify-between py-2.5">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              Overdue dept tasks
+            </div>
+            <span className="text-sm font-bold text-red-600">{tasks.dept_overdue}</span>
+          </div>
+        )}
+        {contracts_expiring_30d > 0 && (
+          <div className="flex items-center justify-between py-2.5">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <FileSignature className="h-4 w-4 text-orange-400" />
+              Contracts expiring (30d)
+            </div>
+            <span className="text-sm font-bold text-orange-600">{contracts_expiring_30d}</span>
+          </div>
+        )}
+        {upcoming_shows.slice(0, 3).map((show) => (
+          <div className="flex items-center justify-between py-2.5" key={show.id}>
+            <span className="text-sm text-gray-700">{show.title}</span>
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+              {show.status.replace(/_/g, ' ')}
+            </span>
+          </div>
+        ))}
+        <div className="py-2.5">
+          <a className="text-xs font-medium text-teal-700 hover:underline" href="/scorecard">
+            Full scorecard →
+          </a>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MANAGER DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -339,11 +392,13 @@ function ManagerDashboard({
   tasks,
   approvals,
   profile,
+  scorecard,
   onTaskClick,
 }: {
   tasks: TaskItem[];
   approvals: ApprovalRequestItem[];
   profile: OperatingProfile;
+  scorecard: Scorecard | null;
   onTaskClick: (id: string) => void;
 }) {
   const pendingApprovals = approvals.filter((a) => a.decision === 'pending');
@@ -444,6 +499,9 @@ function ManagerDashboard({
           </div>
         </Card>
       ) : null}
+
+      {/* Department health scorecard panel */}
+      {scorecard ? <DashboardScorecardPanel scorecard={scorecard} /> : null}
     </div>
   );
 }
@@ -573,6 +631,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [approvals, setApprovals] = useState<ApprovalRequestItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [scorecard, setScorecard] = useState<Scorecard | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -632,6 +691,14 @@ export default function DashboardPage() {
           fetches.push(
             fetchTasks(token, taskParams)
               .then((r) => { if (mounted) setTasks(r.results); })
+              .catch(() => {}),
+          );
+        }
+
+        if (isManager) {
+          fetches.push(
+            fetchScorecard(token)
+              .then((s) => { if (mounted) setScorecard(s); })
               .catch(() => {}),
           );
         }
@@ -706,6 +773,7 @@ export default function DashboardPage() {
                 approvals={approvals}
                 onTaskClick={setSelectedTaskId}
                 profile={profile}
+                scorecard={scorecard}
                 tasks={tasks}
               />
             ) : null

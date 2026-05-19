@@ -76,7 +76,7 @@ export default function HospitalityPage() {
     <AppShell pageTitle="Hospitality">
       <PageHeader
         title="Hospitality"
-        subtitle="VIP hosting, catering and event hospitality"
+        description="VIP hosting, catering and event hospitality"
       />
 
       {loading && <LoadingState label="Loading hospitality requests..." />}

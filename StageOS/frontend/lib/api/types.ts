@@ -1583,3 +1583,108 @@ export type CorrectiveActionItem = {
   completed_date: string | null;
   updated_at: string;
 };
+
+export type PatronSegment = 'general' | 'subscriber' | 'vip' | 'youth' | 'educator' | 'corporate' | 'media' | 'donor';
+
+export type PatronItem = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  segment: PatronSegment;
+  source: string;
+  postal_code: string;
+  city: string;
+  province: string;
+  marketing_opt_in: boolean;
+  popia_consent_given: boolean;
+  popia_consent_date: string | null;
+  is_active: boolean;
+  total_bookings: number;
+  total_spend: string;
+  first_visit_date: string | null;
+  last_visit_date: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PatronSummary = {
+  total: number;
+  opted_in: number;
+  total_revenue: string | null;
+  avg_spend: string | null;
+  by_segment: { segment: string; count: number }[];
+};
+
+export type SocialPostItem = {
+  id: string;
+  campaign: string;
+  platform: string;
+  content: string;
+  status: string;
+  scheduled_at: string | null;
+  published_at: string | null;
+  reach: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  created_at: string;
+};
+
+export type AudienceReportItem = {
+  id: string;
+  operating_context: string;
+  total_attendance: number;
+  capacity_total: number;
+  comps_issued: number;
+  school_groups: number;
+  average_ticket_price: string;
+  gross_revenue: string;
+  occupancy_rate: number;
+  demographics_notes: string;
+  feedback_summary: string;
+  average_rating: string;
+  is_finalised: boolean;
+  created_at: string;
+};
+
+export type ShowCallItem = {
+  id: string;
+  operating_context: string;
+  performance: string | null;
+  show_date: string;
+  call_time: string;
+  house_open_time: string | null;
+  show_start_time: string | null;
+  expected_audience: number | null;
+  technical_notes: string;
+  foh_notes: string;
+  cast_notes: string;
+  production_manager_notes: string;
+  status: string;
+  distributed_at: string | null;
+  created_at: string;
+};
+
+export type PostShowReportItem = {
+  id: string;
+  operating_context: string;
+  performance: string | null;
+  show_date: string;
+  actual_start_time: string | null;
+  actual_end_time: string | null;
+  actual_audience: number;
+  walk_ins: number;
+  comps_used: number;
+  incidents_count: number;
+  technical_issues: string;
+  foh_summary: string;
+  audience_feedback: string;
+  overall_rating: number | null;
+  cash_collected: string;
+  card_collected: string;
+  created_at: string;
+};

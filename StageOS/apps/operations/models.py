@@ -100,3 +100,81 @@ class Incident(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.incident_type} at {self.operating_context} [{self.severity}]'
+
+
+class ShowCallStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    DISTRIBUTED = 'distributed', 'Distributed'
+    CONFIRMED = 'confirmed', 'Confirmed'
+
+
+class ShowCall(TenantOwnedModel):
+    """The daily show-day briefing document sent to all departments."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.PROTECT,
+        related_name='show_calls',
+    )
+    performance = models.ForeignKey(
+        'programming.Performance', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='show_calls',
+    )
+    show_date = models.DateField()
+    call_time = models.TimeField()
+    house_open_time = models.TimeField(null=True, blank=True)
+    show_start_time = models.TimeField(null=True, blank=True)
+    expected_audience = models.PositiveIntegerField(null=True, blank=True)
+    technical_notes = models.TextField(blank=True)
+    foh_notes = models.TextField(blank=True)
+    cast_notes = models.TextField(blank=True)
+    production_manager_notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=ShowCallStatus.choices, default=ShowCallStatus.DRAFT)
+    distributed_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='show_calls',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-show_date', '-call_time']
+
+    def __str__(self):
+        return f'Show Call — {self.operating_context} on {self.show_date}'
+
+
+class PostShowReport(TenantOwnedModel):
+    """Completed after each performance: actuals vs plan."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.PROTECT,
+        related_name='post_show_reports',
+    )
+    performance = models.ForeignKey(
+        'programming.Performance', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='post_show_reports',
+    )
+    show_date = models.DateField()
+    actual_start_time = models.TimeField(null=True, blank=True)
+    actual_end_time = models.TimeField(null=True, blank=True)
+    actual_audience = models.PositiveIntegerField(default=0)
+    walk_ins = models.PositiveIntegerField(default=0)
+    comps_used = models.PositiveIntegerField(default=0)
+    incidents_count = models.PositiveIntegerField(default=0)
+    technical_issues = models.TextField(blank=True)
+    foh_summary = models.TextField(blank=True)
+    audience_feedback = models.TextField(blank=True)
+    overall_rating = models.PositiveSmallIntegerField(null=True, blank=True)  # 1-5
+    cash_collected = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    card_collected = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    submitted_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='post_show_reports',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-show_date']
+
+    def __str__(self):
+        return f'Post-Show: {self.operating_context} on {self.show_date}'

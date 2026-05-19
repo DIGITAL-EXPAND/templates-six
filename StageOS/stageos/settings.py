@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'apps.suppliers.apps.SuppliersConfig',
     'apps.artists.apps.ArtistsConfig',
     'apps.ticketing.apps.TicketingConfig',
+    'apps.patrons.apps.PatronsConfig',
     'apps.youth.apps.YouthConfig',
     'apps.governance.apps.GovernanceConfig',
     'apps.workflows.apps.WorkflowsConfig',

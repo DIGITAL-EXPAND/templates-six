@@ -2,7 +2,7 @@ from rest_framework import serializers
 from common.serializers import (
     check_tenant_fk, validate_unique_context, ProtectedFieldsMixin, require_non_negative,
 )
-from .models import FOHPlan, ShowDayChecklist, Incident
+from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport
 
 
 class FOHPlanSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -60,3 +60,41 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     def validate_foh_plan(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'FOH plan')
+
+
+class ShowCallSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShowCall
+        fields = [
+            'id', 'operating_context', 'performance', 'show_date', 'call_time',
+            'house_open_time', 'show_start_time', 'expected_audience',
+            'technical_notes', 'foh_notes', 'cast_notes', 'production_manager_notes',
+            'status', 'distributed_at', 'created_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'distributed_at', 'created_by', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_performance(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Performance')
+
+
+class PostShowReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostShowReport
+        fields = [
+            'id', 'operating_context', 'performance', 'show_date',
+            'actual_start_time', 'actual_end_time', 'actual_audience',
+            'walk_ins', 'comps_used', 'incidents_count',
+            'technical_issues', 'foh_summary', 'audience_feedback',
+            'overall_rating', 'cash_collected', 'card_collected',
+            'submitted_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'submitted_by', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_performance(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Performance')

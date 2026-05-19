@@ -97,6 +97,12 @@ import type {
   KPIItem,
   RiskItem,
   CorrectiveActionItem,
+  PatronItem,
+  PatronSummary,
+  SocialPostItem,
+  AudienceReportItem,
+  ShowCallItem,
+  PostShowReportItem,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1343,4 +1349,37 @@ export function rejectPurchaseRequisition(token: string, id: string, reason: str
 
 export function fetchPurchaseOrders(token: string, params?: Record<string, string>) {
   return apiRequest<PaginatedResponse<PurchaseOrderItem>>(`/api/v1/purchase-orders/${queryString(params)}`, { token });
+}
+
+// Patrons
+export function fetchPatrons(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<PatronItem>>(`/api/v1/patrons/${queryString(params)}`, { token });
+}
+
+export function fetchPatronSummary(token: string) {
+  return apiRequest<PatronSummary>('/api/v1/patrons/summary/', { token });
+}
+
+export function createPatron(token: string, data: Partial<PatronItem>) {
+  return apiRequest<PatronItem>('/api/v1/patrons/', { method: 'POST', token, body: data });
+}
+
+// Social posts
+export function fetchSocialPosts(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<SocialPostItem>>(`/api/v1/marketing/social-posts/${queryString(params)}`, { token });
+}
+
+// Audience reports
+export function fetchAudienceReports(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<AudienceReportItem>>(`/api/v1/marketing/audience-reports/${queryString(params)}`, { token });
+}
+
+// Show calls
+export function fetchShowCalls(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<ShowCallItem>>(`/api/v1/operations/show-calls/${queryString(params)}`, { token });
+}
+
+// Post-show reports
+export function fetchPostShowReports(token: string, params?: Record<string, string>) {
+  return apiRequest<PaginatedResponse<PostShowReportItem>>(`/api/v1/operations/post-show-reports/${queryString(params)}`, { token });
 }

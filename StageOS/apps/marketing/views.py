@@ -6,8 +6,11 @@ from common.views import TenantScopedMixin
 from common.permissions import UserRoles, is_admin_user, user_type
 from apps.documents.models import Document
 from apps.structure.models import UserDepartmentMembership
-from .models import Campaign, CampaignDeliverable
-from .serializers import CampaignSerializer, CampaignDeliverableSerializer
+from .models import Campaign, CampaignDeliverable, SocialPost, AudienceReport
+from .serializers import (
+    CampaignSerializer, CampaignDeliverableSerializer,
+    SocialPostSerializer, AudienceReportSerializer,
+)
 from .services import set_campaign_status, complete_deliverable
 
 
@@ -81,3 +84,29 @@ class CampaignDeliverableViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             self.get_object(), request.user, evidence, request.data.get('comment', ''),
         )
         return Response(CampaignDeliverableSerializer(updated, context={'request': request}).data)
+
+
+class SocialPostViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = SocialPost.objects.select_related('campaign', 'created_by')
+    serializer_class = SocialPostSerializer
+    filterset_fields = ['campaign', 'platform', 'status']
+    ordering = ['-scheduled_at', '-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id, created_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        from django.utils import timezone
+        post = self.get_object()
+        post.status = 'published'
+        post.published_at = timezone.now()
+        post.save(update_fields=['status', 'published_at', 'updated_at'])
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+
+class AudienceReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AudienceReport.objects.select_related('operating_context')
+    serializer_class = AudienceReportSerializer
+    filterset_fields = ['operating_context', 'is_finalised']
+    ordering = ['-created_at']

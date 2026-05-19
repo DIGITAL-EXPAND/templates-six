@@ -102,6 +102,7 @@ const allItems = {
   procurement:   { label: 'Procurement',              href: '/suppliers/procurement',     icon: ShoppingCart },
   boxOffice:     { label: 'Box Office',               href: '/ticketing/bookings',        icon: CreditCard },
   tillRecon:     { label: 'Till Recon',               href: '/ticketing/reconciliation',  icon: Receipt },
+  patrons:       { label: 'Patron CRM',               href: '/patrons',                   icon: Users2 },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -137,6 +138,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.contracts,
           allItems.suppliers,
           allItems.artists,
+          allItems.patrons,
         ],
       },
       {
@@ -171,6 +173,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.reports,
           allItems.audit,
           allItems.tasks,
+          allItems.patrons,
         ],
       },
     ];
@@ -232,6 +235,10 @@ export function navigationGroups(profile: OperatingProfile | null) {
     // Ticketing managers get box office sub-pages
     if (kind === 'ticketing') {
       deptItems.splice(5, 0, allItems.boxOffice, allItems.tillRecon);
+    }
+    // Marketing managers get Patron CRM
+    if (kind === 'marketing') {
+      deptItems.splice(5, 0, allItems.patrons);
     }
     return [{ label: 'Department', items: deptItems }];
   }

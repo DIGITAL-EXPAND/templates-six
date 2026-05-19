@@ -5,8 +5,11 @@ from rest_framework.response import Response
 from common.views import TenantScopedMixin
 from common.permissions import UserRoles, is_admin_user, user_type
 from apps.structure.models import UserDepartmentMembership
-from .models import FOHPlan, ShowDayChecklist, Incident
-from .serializers import FOHPlanSerializer, ShowDayChecklistSerializer, IncidentSerializer
+from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport
+from .serializers import (
+    FOHPlanSerializer, ShowDayChecklistSerializer, IncidentSerializer,
+    ShowCallSerializer, PostShowReportSerializer,
+)
 from .services import log_incident, set_foh_status, check_checklist_item
 
 
@@ -91,3 +94,38 @@ class IncidentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         context_obj = vd.pop('operating_context')
         incident = log_incident(context=context_obj, user=self.request.user, data=vd)
         serializer.instance = incident
+
+
+class ShowCallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ShowCall.objects.select_related('operating_context', 'performance', 'created_by')
+    serializer_class = ShowCallSerializer
+    filterset_fields = ['operating_context', 'performance', 'status', 'show_date']
+    ordering = ['-show_date', '-call_time']
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organisation_id=self.request.user.organisation_id,
+            created_by=self.request.user,
+        )
+
+    @action(detail=True, methods=['post'])
+    def distribute(self, request, pk=None):
+        from django.utils import timezone
+        show_call = self.get_object()
+        show_call.status = 'distributed'
+        show_call.distributed_at = timezone.now()
+        show_call.save(update_fields=['status', 'distributed_at', 'updated_at'])
+        return Response(ShowCallSerializer(show_call, context={'request': request}).data)
+
+
+class PostShowReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PostShowReport.objects.select_related('operating_context', 'performance', 'submitted_by')
+    serializer_class = PostShowReportSerializer
+    filterset_fields = ['operating_context', 'performance', 'show_date']
+    ordering = ['-show_date']
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organisation_id=self.request.user.organisation_id,
+            submitted_by=self.request.user,
+        )

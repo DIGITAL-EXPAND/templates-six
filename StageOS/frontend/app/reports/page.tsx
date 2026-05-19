@@ -218,6 +218,79 @@ export default function ReportsPage() {
         {error ? <ErrorState message={error} /> : null}
         {loading ? <LoadingState label="Loading reports" /> : (
           <>
+            {/* Organisation Health summary strip */}
+            {summary && (
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <HealthCard
+                  label="Active Productions"
+                  value={summary.total_contexts}
+                  colour="blue"
+                />
+                <HealthCard
+                  label="Open Risks"
+                  value={summary.open_risks}
+                  colour={summary.open_risks > 0 ? 'red' : 'green'}
+                />
+                <HealthCard
+                  label="Tasks Overdue"
+                  value={summary.open_tasks}
+                  colour={summary.open_tasks > 0 ? 'amber' : 'green'}
+                />
+                <HealthCard
+                  label="Pending Approvals"
+                  value={summary.pending_approvals}
+                  colour={summary.pending_approvals > 0 ? 'amber' : 'green'}
+                />
+              </section>
+            )}
+
+            {/* Show Report — productions list */}
+            {workspaces.length > 0 && (
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <h2 className="mb-3 text-base font-bold text-slate-950">Show Report</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="pb-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Production</th>
+                        <th className="pb-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                        <th className="pb-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Readiness</th>
+                        <th className="pb-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Opening</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {workspaces.map(ws => (
+                        <tr key={ws.id} className="py-1">
+                          <td className="py-2 font-medium text-slate-900">{ws.title}</td>
+                          <td className="py-2">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs capitalize">
+                              {ws.status.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="py-2">
+                            {ws.readiness_score !== undefined ? (
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                                  <div
+                                    className={`h-1.5 rounded-full ${ws.readiness_score >= 90 ? 'bg-green-500' : ws.readiness_score >= 60 ? 'bg-amber-400' : 'bg-red-500'}`}
+                                    style={{ width: `${ws.readiness_score}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-slate-500">{ws.readiness_score}%</span>
+                              </div>
+                            ) : <span className="text-xs text-slate-400">—</span>}
+                          </td>
+                          <td className="py-2 text-xs text-slate-500">
+                            {ws.opening_date ? new Date(ws.opening_date).toLocaleDateString('en-ZA') : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <ReportCard access={summary ? 'ready' : 'restricted'} description="Leadership totals, risks, tasks, approvals, budgets, KPIs and openings." onOpen={() => setActive('executive')} title="Organisation Overview" />
               <ReportCard access={boardSummary ? (boardSummary.board_ready ? 'ready' : 'attention_required') : 'restricted'} description="Board-ready pilot signal across readiness, risks, approvals, evidence and calendar issues." onOpen={() => setActive('board')} title="Board Summary" />
@@ -262,5 +335,24 @@ export default function ReportsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+type HealthColour = 'blue' | 'green' | 'amber' | 'red';
+
+const HEALTH_COLOURS: Record<HealthColour, { card: string; value: string }> = {
+  blue:  { card: 'border-blue-100 bg-blue-50',   value: 'text-blue-800' },
+  green: { card: 'border-green-100 bg-green-50', value: 'text-green-800' },
+  amber: { card: 'border-amber-100 bg-amber-50', value: 'text-amber-800' },
+  red:   { card: 'border-red-100 bg-red-50',     value: 'text-red-800' },
+};
+
+function HealthCard({ label, value, colour }: { label: string; value: number; colour: HealthColour }) {
+  const c = HEALTH_COLOURS[colour];
+  return (
+    <article className={`rounded-lg border p-4 text-center ${c.card}`}>
+      <div className={`text-3xl font-bold ${c.value}`}>{value}</div>
+      <div className="mt-1 text-sm font-semibold text-slate-600">{label}</div>
+    </article>
   );
 }

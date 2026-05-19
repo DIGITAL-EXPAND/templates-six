@@ -5,10 +5,10 @@ from rest_framework.response import Response
 from common.views import TenantScopedMixin
 from common.permissions import UserRoles, is_admin_user, user_type
 from apps.structure.models import UserDepartmentMembership
-from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport
+from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport, StaffCall
 from .serializers import (
     FOHPlanSerializer, ShowDayChecklistSerializer, IncidentSerializer,
-    ShowCallSerializer, PostShowReportSerializer,
+    ShowCallSerializer, PostShowReportSerializer, StaffCallSerializer,
 )
 from .services import log_incident, set_foh_status, check_checklist_item
 
@@ -129,3 +129,19 @@ class PostShowReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             organisation_id=self.request.user.organisation_id,
             submitted_by=self.request.user,
         )
+
+
+class StaffCallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = StaffCall.objects.select_related('show_call', 'staff_member')
+    serializer_class = StaffCallSerializer
+    filterset_fields = ['show_call', 'staff_member', 'role', 'status']
+    ordering = ['call_time', 'role']
+
+    @action(detail=True, methods=['post'])
+    def confirm(self, request, pk=None):
+        from django.utils import timezone
+        staff_call = self.get_object()
+        staff_call.status = 'confirmed'
+        staff_call.confirmed_at = timezone.now()
+        staff_call.save(update_fields=['status', 'confirmed_at', 'updated_at'])
+        return Response(StaffCallSerializer(staff_call, context={'request': request}).data)

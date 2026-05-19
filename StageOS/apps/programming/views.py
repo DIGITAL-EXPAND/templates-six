@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -236,6 +237,32 @@ class SeasonViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(organisation=self.request.user.organisation)
 
+    @action(detail=True, methods=['get'])
+    def summary(self, request, pk=None):
+        """Aggregate season analytics: shows, performances, tickets sold, gross revenue."""
+        from apps.ticketing.models import Booking, Ticket
+        season = self.get_object()
+        shows = season.shows.filter(organisation=request.user.organisation)
+        show_ids = list(shows.values_list('id', flat=True))
+        performances = Performance.objects.filter(
+            show_id__in=show_ids, organisation=request.user.organisation
+        )
+        bookings = Booking.objects.filter(
+            performance__in=performances, organisation=request.user.organisation
+        )
+        tickets = Ticket.objects.filter(booking__in=bookings)
+        gross_revenue = tickets.aggregate(total=models.Sum('amount'))['total'] or 0
+        return Response({
+            'season_id': str(season.id),
+            'season_name': season.name,
+            'year': season.year,
+            'show_count': shows.count(),
+            'performance_count': performances.count(),
+            'total_bookings': bookings.count(),
+            'tickets_sold': tickets.count(),
+            'gross_revenue': str(gross_revenue),
+        })
+
 
 class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = Show.objects.select_related('operating_context', 'season')
@@ -249,6 +276,34 @@ class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['get'])
+    def financials(self, request, pk=None):
+        """Per-show P&L: budget approved, ticket revenue, artist costs."""
+        from apps.ticketing.models import Booking, Ticket
+        from apps.artists.models import ArtistPayment, PaymentStatus
+        show = self.get_object()
+        performances = Performance.objects.filter(
+            show=show, organisation=request.user.organisation
+        )
+        bookings = Booking.objects.filter(performance__in=performances)
+        ticket_revenue = Ticket.objects.filter(
+            booking__in=bookings
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        artist_payments_paid = ArtistPayment.objects.filter(
+            engagement__operating_context_id=show.operating_context_id,
+            status=PaymentStatus.PAID,
+            organisation=request.user.organisation,
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        return Response({
+            'show_id': str(show.id),
+            'show_title': show.operating_context.title if show.operating_context else show.title,
+            'budget_approved': str(show.budget_approved or 0),
+            'revenue_target': str(show.revenue_target or 0),
+            'ticket_revenue': str(ticket_revenue),
+            'artist_costs_paid': str(artist_payments_paid),
+            'net_position': str(ticket_revenue - artist_payments_paid),
+        })
 
 
 class PerformanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):

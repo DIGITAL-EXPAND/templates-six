@@ -1,11 +1,16 @@
+from datetime import date
+
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from common.views import TenantScopedMixin
 from common.permissions import CanAccessArtistData, IsTenantMember, UserRoles, user_type
-from .models import Artist, ArtistDocument, ArtistEngagement
-from .serializers import ArtistSerializer, ArtistDocumentSerializer, ArtistEngagementSerializer
+from .models import Artist, ArtistDocument, ArtistEngagement, ArtistPayment, PaymentStatus
+from .serializers import (
+    ArtistSerializer, ArtistDocumentSerializer, ArtistEngagementSerializer,
+    ArtistPaymentSerializer,
+)
 from .services import (
     upload_artist_document, confirm_engagement,
     verify_artist_document, reject_artist_document,
@@ -69,3 +74,27 @@ class ArtistEngagementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         engagement = self.get_object()
         updated = confirm_engagement(engagement, request.user)
         return Response(ArtistEngagementSerializer(updated, context={'request': request}).data)
+
+
+class ArtistPaymentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ArtistPayment.objects.select_related('engagement', 'approved_by')
+    serializer_class = ArtistPaymentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember, CanAccessArtistData]
+    filterset_fields = ['engagement', 'milestone', 'status']
+    ordering = ['due_date', 'created_at']
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        payment = self.get_object()
+        payment.status = PaymentStatus.APPROVED
+        payment.approved_by = request.user
+        payment.save(update_fields=['status', 'approved_by', 'updated_at'])
+        return Response(ArtistPaymentSerializer(payment, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        payment = self.get_object()
+        payment.status = PaymentStatus.PAID
+        payment.paid_date = date.today()
+        payment.save(update_fields=['status', 'paid_date', 'updated_at'])
+        return Response(ArtistPaymentSerializer(payment, context={'request': request}).data)

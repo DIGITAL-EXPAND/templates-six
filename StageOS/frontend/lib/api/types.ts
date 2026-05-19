@@ -1688,3 +1688,64 @@ export type PostShowReportItem = {
   card_collected: string;
   created_at: string;
 };
+
+// Phase 4 types
+export type PaymentMilestone = 'deposit' | 'balance' | 'final' | 'full';
+export type PaymentStatus = 'pending' | 'invoice_received' | 'approved' | 'paid' | 'disputed';
+
+export type ArtistPaymentItem = {
+  id: string;
+  engagement: string;
+  milestone: PaymentMilestone;
+  amount: string;
+  status: PaymentStatus;
+  due_date: string | null;
+  invoice_number: string;
+  paid_date: string | null;
+  approved_by: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StaffCallStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+export type StaffCallRole =
+  | 'stage_manager' | 'deputy_sm' | 'lighting_op' | 'sound_op' | 'follow_spot'
+  | 'fly_op' | 'head_of_wardrobe' | 'wardrobe_assistant' | 'head_usher' | 'usher'
+  | 'box_office' | 'security' | 'foh_manager' | 'production_manager' | 'other';
+
+export type StaffCallItem = {
+  id: string;
+  show_call: string;
+  staff_member: string;
+  staff_member_name: string;
+  role: StaffCallRole;
+  call_time: string;
+  finish_time: string | null;
+  status: StaffCallStatus;
+  confirmed_at: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SeasonSummary = {
+  season_id: string;
+  season_name: string;
+  year: number;
+  show_count: number;
+  performance_count: number;
+  total_bookings: number;
+  tickets_sold: number;
+  gross_revenue: string;
+};
+
+export type ShowFinancials = {
+  show_id: string;
+  show_title: string;
+  budget_approved: string;
+  revenue_target: string;
+  ticket_revenue: string;
+  artist_costs_paid: string;
+  net_position: string;
+};

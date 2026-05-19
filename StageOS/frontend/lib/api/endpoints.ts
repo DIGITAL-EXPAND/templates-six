@@ -1,4 +1,4 @@
-import { apiRequest, apiUrl } from './client';
+import { ApiError, apiRequest, apiUrl } from './client';
 import type {
   AuthTokens,
   ArtistDocumentItem,
@@ -103,6 +103,10 @@ import type {
   AudienceReportItem,
   ShowCallItem,
   PostShowReportItem,
+  ArtistPaymentItem,
+  StaffCallItem,
+  SeasonSummary,
+  ShowFinancials,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1382,4 +1386,59 @@ export function fetchShowCalls(token: string, params?: Record<string, string>) {
 // Post-show reports
 export function fetchPostShowReports(token: string, params?: Record<string, string>) {
   return apiRequest<PaginatedResponse<PostShowReportItem>>(`/api/v1/operations/post-show-reports/${queryString(params)}`, { token });
+}
+
+// Phase 4 endpoints
+export async function fetchArtistPayments(token: string, engagementId?: string): Promise<ArtistPaymentItem[]> {
+  const url = engagementId
+    ? `/api/v1/artists/payments/?engagement=${engagementId}`
+    : '/api/v1/artists/payments/';
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load artist payments' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function approveArtistPayment(token: string, id: string): Promise<ArtistPaymentItem> {
+  const r = await fetch(`/api/v1/artists/payments/${id}/approve/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to approve payment' });
+  return r.json();
+}
+
+export async function markArtistPaymentPaid(token: string, id: string): Promise<ArtistPaymentItem> {
+  const r = await fetch(`/api/v1/artists/payments/${id}/mark_paid/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to mark payment paid' });
+  return r.json();
+}
+
+export async function fetchStaffCalls(token: string, showCallId?: string): Promise<StaffCallItem[]> {
+  const url = showCallId
+    ? `/api/v1/operations/staff-calls/?show_call=${showCallId}`
+    : '/api/v1/operations/staff-calls/';
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load staff calls' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function fetchSeasonSummary(token: string, seasonId: string): Promise<SeasonSummary> {
+  const r = await fetch(`/api/v1/programming/seasons/${seasonId}/summary/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load season summary' });
+  return r.json();
+}
+
+export async function fetchShowFinancials(token: string, showId: string): Promise<ShowFinancials> {
+  const r = await fetch(`/api/v1/programming/shows/${showId}/financials/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load show financials' });
+  return r.json();
 }

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from common.serializers import (
     check_tenant_fk, validate_unique_context, ProtectedFieldsMixin, require_non_negative,
 )
-from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport
+from .models import FOHPlan, ShowDayChecklist, Incident, ShowCall, PostShowReport, StaffCall
 
 
 class FOHPlanSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -98,3 +98,19 @@ class PostShowReportSerializer(serializers.ModelSerializer):
 
     def validate_performance(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Performance')
+
+
+class StaffCallSerializer(serializers.ModelSerializer):
+    staff_member_name = serializers.SerializerMethodField(read_only=True)
+
+    def get_staff_member_name(self, obj):
+        return obj.staff_member.get_full_name() or obj.staff_member.email
+
+    class Meta:
+        model = StaffCall
+        fields = [
+            'id', 'show_call', 'staff_member', 'staff_member_name',
+            'role', 'call_time', 'finish_time', 'status',
+            'confirmed_at', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'confirmed_at', 'created_at', 'updated_at']

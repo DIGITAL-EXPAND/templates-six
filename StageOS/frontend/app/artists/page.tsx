@@ -9,18 +9,22 @@ import { ArtistFilters, type ArtistFiltersValue } from '@/components/artists/art
 import { artistDisplayName, artistDocuments, artistEngagements } from '@/components/artists/helpers';
 import { ArtistList } from '@/components/artists/artist-list';
 import { PageHeader } from '@/components/ui/page-header';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState, ErrorState, LoadingState, PermissionDeniedState } from '@/components/ui/states';
 import { ApiError } from '@/lib/api/client';
 import {
+  approveArtistPayment,
   confirmArtistEngagement,
   decideArtistDocument,
   fetchArtistDocuments,
   fetchArtistEngagements,
+  fetchArtistPayments,
   fetchArtists,
   fetchContracts,
   fetchOperatingContexts,
+  markArtistPaymentPaid,
 } from '@/lib/api/endpoints';
-import type { ArtistDocumentItem, ArtistEngagementItem, ArtistItem, ContractRecordItem, OperatingContextListItem } from '@/lib/api/types';
+import type { ArtistDocumentItem, ArtistEngagementItem, ArtistItem, ArtistPaymentItem, ContractRecordItem, OperatingContextListItem } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
 
 export default function ArtistsPage() {

@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   BadgeCheck,
   BarChart3,
   Bell,
@@ -107,6 +108,9 @@ const allItems = {
   shows:          { label: 'Shows',             href: '/programming/shows',         icon: CalendarClock },
   venueManagement:{ label: 'Venue Management',  href: '/settings/venues',           icon: Landmark },
   workflows:      { label: 'Workflows',          href: '/workspaces/workflows',      icon: Activity },
+  complianceCompact: { label: 'Shareholder Compact', href: '/governance/compliance', icon: Scale },
+  iufw:             { label: 'IUFW Register',        href: '/governance/iufw',       icon: AlertTriangle },
+  delegation:       { label: 'Delegation Matrix',    href: '/settings/delegation',   icon: ClipboardCheck },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -161,7 +165,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.reports, allItems.audit, allItems.settings, allItems.venueManagement],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.iufw, allItems.reports, allItems.audit, allItems.settings, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -180,6 +184,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.governance,
           allItems.budgets,
           allItems.boardMeetings,
+          allItems.complianceCompact,
+          allItems.iufw,
           allItems.reports,
           allItems.audit,
           allItems.tasks,
@@ -210,7 +216,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
     return [
       {
         label: 'Board',
-        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.tasks],
+        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.complianceCompact, allItems.tasks],
       },
     ];
   }

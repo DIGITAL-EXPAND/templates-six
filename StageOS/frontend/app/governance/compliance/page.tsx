@@ -76,14 +76,14 @@ export default function ShareholderCompactPage() {
     }
   }
 
-  if (loading) return <AppShell><LoadingState message="Loading shareholder compacts..." /></AppShell>;
+  if (loading) return <AppShell><LoadingState label="Loading shareholder compacts…" /></AppShell>;
   if (error) return <AppShell><ErrorState message={error} /></AppShell>;
 
   return (
     <AppShell>
       <PageHeader title="Shareholder Compact" />
       {compacts.length === 0 ? (
-        <EmptyState message="No shareholder compacts found." />
+        <EmptyState title="No shareholder compacts found." />
       ) : (
         <div className="space-y-4 p-4">
           {compacts.map((compact) => {
@@ -102,7 +102,9 @@ export default function ShareholderCompactPage() {
                         <h2 className="text-lg font-semibold text-gray-900">
                           FY {compact.financial_year}
                         </h2>
-                        <StatusBadge tone={compactStatusTone(compact.status)} label={compact.status.replace(/_/g, ' ')} />
+                        <StatusBadge tone={compactStatusTone(compact.status)}>
+                          {compact.status.replace(/_/g, ' ')}
+                        </StatusBadge>
                       </div>
                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-gray-600">
                         <div>
@@ -135,7 +137,7 @@ export default function ShareholderCompactPage() {
                 {isExpanded && (
                   <div className="border-t border-gray-100 p-5">
                     {isLoadingProgress ? (
-                      <LoadingState message="Loading progress data..." />
+                      <LoadingState label="Loading progress data…" />
                     ) : (
                       <div className="space-y-6">
                         {/* Targets / KPI Progress */}
@@ -167,14 +169,15 @@ export default function ShareholderCompactPage() {
                                         </td>
                                         <td className="py-2 pr-4 text-gray-600">{t.target_value} {t.unit}</td>
                                         <td className="py-2 pr-4 text-gray-600">
-                                          {actual !== null ? `${actual} ${t.unit}` : <span className="text-gray-400 italic">Not reported</span>}
+                                          {actual !== null
+                                            ? `${actual} ${t.unit}`
+                                            : <span className="text-gray-400 italic">Not reported</span>}
                                         </td>
                                         <td className="py-2 pr-4 text-gray-600">{t.weight_percent}%</td>
                                         <td className="py-2">
-                                          <StatusBadge
-                                            tone={ragTone(t.achievement_pct)}
-                                            label={`${t.achievement_pct.toFixed(0)}%`}
-                                          />
+                                          <StatusBadge tone={ragTone(t.achievement_pct)}>
+                                            {t.achievement_pct.toFixed(0)}%
+                                          </StatusBadge>
                                         </td>
                                       </tr>
                                     );
@@ -210,10 +213,9 @@ export default function ShareholderCompactPage() {
                                       <td className="py-2 pr-4 font-medium text-gray-900">{zar(tranche.amount)}</td>
                                       <td className="py-2 pr-4 text-gray-600">{tranche.due_date}</td>
                                       <td className="py-2">
-                                        <StatusBadge
-                                          tone={tranche.is_received ? 'good' : 'warning'}
-                                          label={tranche.is_received ? 'Received' : 'Pending'}
-                                        />
+                                        <StatusBadge tone={tranche.is_received ? 'good' : 'warning'}>
+                                          {tranche.is_received ? 'Received' : 'Pending'}
+                                        </StatusBadge>
                                       </td>
                                     </tr>
                                   ))}

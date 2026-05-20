@@ -104,14 +104,14 @@ export default function IUFWRegisterPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  if (loading) return <AppShell><LoadingState message="Loading IUFW register..." /></AppShell>;
+  if (loading) return <AppShell><LoadingState label="Loading IUFW register…" /></AppShell>;
   if (error) return <AppShell><ErrorState message={error} /></AppShell>;
 
   return (
     <AppShell>
       <PageHeader
         title="IUFW Incident Register"
-        subtitle="Irregular, Unauthorised, Fruitless & Wasteful Expenditure"
+        description="Irregular, Unauthorised, Fruitless & Wasteful Expenditure"
       />
 
       {/* Summary strip */}
@@ -232,7 +232,7 @@ export default function IUFWRegisterPage() {
                 disabled={submitting}
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {submitting ? 'Logging...' : 'Log Incident'}
+                {submitting ? 'Logging…' : 'Log Incident'}
               </button>
               <button
                 type="button"
@@ -248,7 +248,7 @@ export default function IUFWRegisterPage() {
 
       {/* Incidents table */}
       {incidents.length === 0 ? (
-        <EmptyState message="No IUFW incidents logged." />
+        <EmptyState title="No IUFW incidents logged." />
       ) : (
         <div className="px-4 pb-8">
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -270,10 +270,14 @@ export default function IUFWRegisterPage() {
                   <tr key={incident.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{incident.reference_number}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge tone={iufwTypeTone(incident.iufw_type)} label={incident.iufw_type} />
+                      <StatusBadge tone={iufwTypeTone(incident.iufw_type)}>
+                        {incident.iufw_type}
+                      </StatusBadge>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge tone={iufwStatusTone(incident.status)} label={incident.status.replace(/_/g, ' ')} />
+                      <StatusBadge tone={iufwStatusTone(incident.status)}>
+                        {incident.status.replace(/_/g, ' ')}
+                      </StatusBadge>
                     </td>
                     <td className="px-4 py-3 text-gray-700 max-w-xs">
                       <span title={incident.description}>

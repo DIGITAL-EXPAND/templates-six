@@ -12,6 +12,7 @@ from .models import (
     Space,
     UserDepartmentMembership,
     Venue,
+    VenueCapacityConfig,
 )
 from .serializers import (
     ApprovalPolicySerializer,
@@ -24,6 +25,7 @@ from .serializers import (
     SOPTemplateSerializer,
     SpaceSerializer,
     UserDepartmentMembershipSerializer,
+    VenueCapacityConfigSerializer,
     VenueSerializer,
 )
 
@@ -81,3 +83,10 @@ class EvidenceRuleViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 class SOPTemplateViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = SOPTemplate.objects.select_related('operating_model', 'department')
     serializer_class = SOPTemplateSerializer
+
+
+class VenueCapacityConfigViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = VenueCapacityConfig.objects.select_related('space', 'space__venue')
+    serializer_class = VenueCapacityConfigSerializer
+    filterset_fields = ['space', 'configuration', 'is_default']
+    ordering = ['space', 'configuration']

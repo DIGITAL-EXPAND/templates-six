@@ -107,6 +107,10 @@ import type {
   StaffCallItem,
   SeasonSummary,
   ShowFinancials,
+  ShowLifecycle,
+  BoardPackData,
+  VenueCapacityConfigItem,
+  ShowItem,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1441,4 +1445,54 @@ export async function fetchShowFinancials(token: string, showId: string): Promis
   });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load show financials' });
   return r.json();
+}
+
+// Phase 5 endpoints
+export async function fetchShowLifecycle(token: string, showId: string): Promise<ShowLifecycle> {
+  const r = await fetch(`/api/v1/programming/shows/${showId}/lifecycle/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load show lifecycle' });
+  return r.json();
+}
+
+export async function fetchShows(token: string): Promise<ShowItem[]> {
+  const r = await fetch('/api/v1/programming/shows/', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load shows' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function fetchBoardPack(token: string, meetingId: string): Promise<BoardPackData> {
+  const r = await fetch(`/api/v1/governance/board-meetings/${meetingId}/pack/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load board pack' });
+  return r.json();
+}
+
+export async function fetchVenueCapacityConfigs(token: string, spaceId?: string): Promise<VenueCapacityConfigItem[]> {
+  const url = spaceId
+    ? `/api/v1/structure/venue-capacity-configs/?space=${spaceId}`
+    : '/api/v1/structure/venue-capacity-configs/';
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load capacity configs' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function fetchVenues(token: string): Promise<{ id: string; name: string; venue_type: string; site: string; site_name: string; capacity: number; is_active: boolean }[]> {
+  const r = await fetch('/api/v1/structure/venues/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load venues' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function fetchSpacesForVenue(token: string): Promise<{ id: string; name: string; space_type: string; venue: string; venue_name: string; capacity: number; is_bookable: boolean }[]> {
+  const r = await fetch('/api/v1/structure/spaces/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load spaces' });
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.results ?? []);
 }

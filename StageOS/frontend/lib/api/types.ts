@@ -1749,3 +1749,93 @@ export type ShowFinancials = {
   artist_costs_paid: string;
   net_position: string;
 };
+
+// Phase 5 types
+export type ShowLifecycle = {
+  show_id: string;
+  title: string;
+  status: string;
+  budget_approved: string;
+  revenue_target: string;
+  performances: {
+    id: string;
+    date: string;
+    start_time: string;
+    end_time: string | null;
+    expected_audience: number;
+  }[];
+  engagements: {
+    id: string;
+    artist_name: string;
+    role: string;
+    fee: string;
+    status: string;
+  }[];
+  payments: {
+    id: string;
+    milestone: string;
+    amount: string;
+    status: string;
+    paid_date: string | null;
+  }[];
+  contracts: {
+    id: string;
+    contract_type: string;
+    status: string;
+    expiry_date: string | null;
+  }[];
+  technical_rider: { status: string; crew_size: number; load_in_date: string | null } | null;
+  show_calls_count: number;
+  post_show_reports_count: number;
+  financial_summary: { ticket_revenue: string; artist_costs_paid: string; net_position: string };
+};
+
+export type BoardPackData = {
+  meeting: {
+    id: string;
+    title: string;
+    meeting_date: string;
+    meeting_type: string;
+    status: string;
+    quorum_achieved: boolean;
+    members_present: number;
+  };
+  kpi_summary: { name: string; target: string; actual: string; unit: string; period: string }[];
+  open_risks: { title: string; likelihood: number; impact: number }[];
+  resolutions: {
+    id: string;
+    number: string;
+    title: string;
+    status: string;
+    proposed_by: string;
+    action_due_date: string | null;
+    action_completed: boolean;
+  }[];
+  budget_summary: {
+    id: string;
+    title: string;
+    total_income: string;
+    total_expenditure: string;
+    net_position: string;
+  } | null;
+  generated_at: string;
+};
+
+export type VenueCapacityConfigItem = {
+  id: string;
+  space: string;
+  configuration: string;
+  capacity: number;
+  notes: string;
+  is_default: boolean;
+  created_at: string;
+};
+
+export type ShowItem = {
+  id: string;
+  operating_context: string | null;
+  budget_approved: string;
+  revenue_target: string;
+  season: string | null;
+  created_at: string;
+};

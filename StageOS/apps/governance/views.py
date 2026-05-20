@@ -1,3 +1,4 @@
+from django.db import models
 from django.utils import timezone
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
@@ -209,6 +210,76 @@ class BoardMeetingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         meeting.status = 'concluded'
         meeting.save(update_fields=['status'])
         return Response(BoardMeetingSerializer(meeting, context={'request': request}).data)
+
+    @action(detail=True, methods=['get'])
+    def pack(self, request, pk=None):
+        """Aggregated board pack data for a meeting."""
+        meeting = self.get_object()
+        org = request.user.organisation
+
+        kpis = KPI.objects.filter(organisation=org).order_by('name')
+        risks = Risk.objects.filter(organisation=org, status='open').order_by('-likelihood')
+        resolutions = meeting.resolutions.all()
+
+        budget_data = None
+        budget = Budget.objects.filter(organisation=org, status='approved').first()
+        if budget:
+            lines = BudgetLine.objects.filter(budget=budget)
+            total_income = lines.filter(category='income').aggregate(
+                t=models.Sum('amount'))['t'] or 0
+            total_exp = lines.filter(category='expenditure').aggregate(
+                t=models.Sum('amount'))['t'] or 0
+            budget_data = {
+                'id': str(budget.id),
+                'title': budget.title,
+                'total_income': str(total_income),
+                'total_expenditure': str(total_exp),
+                'net_position': str(total_income - total_exp),
+            }
+
+        return Response({
+            'meeting': {
+                'id': str(meeting.id),
+                'title': meeting.title,
+                'meeting_date': str(meeting.meeting_date),
+                'meeting_type': meeting.meeting_type,
+                'status': meeting.status,
+                'quorum_achieved': meeting.quorum_achieved,
+                'members_present': meeting.members_present,
+            },
+            'kpi_summary': [
+                {
+                    'name': k.name,
+                    'target': str(k.target_value),
+                    'actual': str(k.actual_value),
+                    'unit': k.unit,
+                    'period': k.period,
+                }
+                for k in kpis
+            ],
+            'open_risks': [
+                {
+                    'title': r.title,
+                    'likelihood': r.likelihood,
+                    'impact': r.impact,
+                }
+                for r in risks
+            ],
+            'resolutions': [
+                {
+                    'id': str(r.id),
+                    'number': r.resolution_number,
+                    'title': r.title,
+                    'status': r.status,
+                    'proposed_by': r.proposed_by,
+                    'action_due_date': str(r.action_due_date) if r.action_due_date else None,
+                    'action_completed': r.action_completed,
+                }
+                for r in resolutions
+            ],
+            'budget_summary': budget_data,
+            'generated_at': timezone.now().isoformat(),
+        })
 
 
 class BoardResolutionViewSet(TenantScopedMixin, viewsets.ModelViewSet):

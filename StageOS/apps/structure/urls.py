@@ -10,6 +10,7 @@ from .views import (
     SiteViewSet,
     SpaceViewSet,
     UserDepartmentMembershipViewSet,
+    VenueCapacityConfigViewSet,
     VenueViewSet,
 )
 
@@ -25,5 +26,6 @@ router.register('module-activations', ModuleActivationViewSet, basename='module-
 router.register('approval-policies', ApprovalPolicyViewSet, basename='approval-policy')
 router.register('evidence-rules', EvidenceRuleViewSet, basename='evidence-rule')
 router.register('sop-templates', SOPTemplateViewSet, basename='sop-template')
+router.register('venue-capacity-configs', VenueCapacityConfigViewSet, basename='venue-capacity-config')
 
 urlpatterns = router.urls

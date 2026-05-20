@@ -102,8 +102,10 @@ const allItems = {
   procurement:   { label: 'Procurement',              href: '/suppliers/procurement',     icon: ShoppingCart },
   boxOffice:     { label: 'Box Office',               href: '/ticketing/bookings',        icon: CreditCard },
   tillRecon:     { label: 'Till Recon',               href: '/ticketing/reconciliation',  icon: Receipt },
-  patrons:       { label: 'Patron CRM',               href: '/patrons',                   icon: Users2 },
-  seasonAnalytics: { label: 'Season Analytics',       href: '/programming/seasons',       icon: BarChart3 },
+  patrons:        { label: 'Patron CRM',        href: '/patrons',                   icon: Users2 },
+  seasonAnalytics:{ label: 'Season Analytics', href: '/programming/seasons',       icon: BarChart3 },
+  shows:          { label: 'Shows',             href: '/programming/shows',         icon: CalendarClock },
+  venueManagement:{ label: 'Venue Management',  href: '/settings/venues',           icon: Landmark },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -133,6 +135,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
         label: 'Planning',
         items: [
           allItems.programming,
+          allItems.shows,
           allItems.seasonAnalytics,
           allItems.tasks,
           allItems.documents,
@@ -156,7 +159,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.reports, allItems.audit, allItems.settings],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.reports, allItems.audit, allItems.settings, allItems.venueManagement],
       },
     ];
   }
@@ -169,6 +172,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.dashboard,
           allItems.calendar,
           allItems.workspaces,
+          allItems.shows,
           allItems.seasonAnalytics,
           allItems.governance,
           allItems.budgets,
@@ -230,7 +234,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.calendar,
       allItems.workspaces,
       departmentItem(kind),
-      ...(kind === 'programming' ? [allItems.seasonAnalytics] : []),
+      ...(kind === 'programming' ? [allItems.shows, allItems.seasonAnalytics] : []),
       allItems.tasks,
       allItems.documents,
       allItems.reports,

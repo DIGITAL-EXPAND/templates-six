@@ -12,6 +12,7 @@ from .models import (
     Space,
     UserDepartmentMembership,
     Venue,
+    VenueCapacityConfig,
 )
 
 
@@ -187,3 +188,13 @@ class SOPTemplateSerializer(serializers.ModelSerializer):
 
     def validate_department(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Department')
+
+
+class VenueCapacityConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VenueCapacityConfig
+        fields = ['id', 'space', 'configuration', 'capacity', 'notes', 'is_default', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_space(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Space')

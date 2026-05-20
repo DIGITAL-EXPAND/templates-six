@@ -166,6 +166,35 @@ class Space(TenantOwnedModel):
         return f'{self.name} — {self.venue.name}'
 
 
+class SeatingConfiguration(models.TextChoices):
+    THEATRE = 'theatre', 'Theatre (fixed rows)'
+    CABARET = 'cabaret', 'Cabaret (round tables)'
+    STANDING = 'standing', 'Standing'
+    THRUST = 'thrust', 'Thrust'
+    TRAVERSE = 'traverse', 'Traverse'
+    IN_THE_ROUND = 'in_the_round', 'In the Round'
+    PROMENADE = 'promenade', 'Promenade'
+    FLEXIBLE = 'flexible', 'Flexible'
+
+
+class VenueCapacityConfig(TenantOwnedModel):
+    """Named capacity configuration for a space (e.g. cabaret vs theatre seating)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    space = models.ForeignKey(Space, on_delete=models.CASCADE, related_name='capacity_configs')
+    configuration = models.CharField(max_length=20, choices=SeatingConfiguration.choices)
+    capacity = models.PositiveIntegerField()
+    notes = models.TextField(blank=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['configuration']
+        unique_together = [('space', 'configuration')]
+
+    def __str__(self):
+        return f'{self.space} — {self.get_configuration_display()} ({self.capacity})'
+
+
 class Department(TenantOwnedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)

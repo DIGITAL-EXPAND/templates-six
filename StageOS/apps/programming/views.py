@@ -278,6 +278,102 @@ class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         return qs.filter(organisation_id=self.request.user.organisation_id)
 
     @action(detail=True, methods=['get'])
+    def lifecycle(self, request, pk=None):
+        """Full production timeline for a show."""
+        from apps.artists.models import ArtistEngagement, ArtistPayment
+        from apps.contracts.models import ContractRecord
+        from apps.technical.models import TechnicalRider
+        from apps.ticketing.models import Booking, Ticket
+        from apps.operations.models import ShowCall, PostShowReport
+
+        show = self.get_object()
+        org = request.user.organisation
+
+        performances = show.performances.filter(organisation=org).order_by('performance_date', 'start_time')
+        engagements = ArtistEngagement.objects.filter(
+            operating_context=show.operating_context, organisation=org
+        ).select_related('artist')
+        payments = ArtistPayment.objects.filter(
+            engagement__operating_context=show.operating_context, organisation=org
+        )
+        contracts = ContractRecord.objects.filter(
+            operating_context=show.operating_context, organisation=org
+        )
+        try:
+            rider = TechnicalRider.objects.get(operating_context=show.operating_context, organisation=org)
+            rider_data = {
+                'status': rider.status,
+                'crew_size': rider.crew_size,
+                'load_in_date': str(rider.load_in_date) if rider.load_in_date else None,
+            }
+        except TechnicalRider.DoesNotExist:
+            rider_data = None
+
+        ctx = show.operating_context
+        show_calls = ShowCall.objects.filter(operating_context=ctx, organisation=org) if ctx else ShowCall.objects.none()
+        post_show = PostShowReport.objects.filter(operating_context=ctx, organisation=org) if ctx else PostShowReport.objects.none()
+        bookings = Booking.objects.filter(performance__show=show, organisation=org)
+        ticket_revenue = Ticket.objects.filter(booking__in=bookings).aggregate(
+            total=models.Sum('amount'))['total'] or 0
+        paid_costs = payments.filter(status='paid').aggregate(
+            total=models.Sum('amount'))['total'] or 0
+
+        return Response({
+            'show_id': str(show.id),
+            'title': ctx.title if ctx else '',
+            'status': ctx.status if ctx else '',
+            'budget_approved': str(show.budget_approved or 0),
+            'revenue_target': str(show.revenue_target or 0),
+            'performances': [
+                {
+                    'id': str(p.id),
+                    'date': str(p.performance_date),
+                    'start_time': str(p.start_time),
+                    'end_time': str(p.end_time) if p.end_time else None,
+                    'expected_audience': p.expected_audience,
+                }
+                for p in performances
+            ],
+            'engagements': [
+                {
+                    'id': str(e.id),
+                    'artist_name': e.artist.professional_name or e.artist.legal_name,
+                    'role': e.role,
+                    'fee': str(e.fee),
+                    'status': e.status,
+                }
+                for e in engagements
+            ],
+            'payments': [
+                {
+                    'id': str(p.id),
+                    'milestone': p.milestone,
+                    'amount': str(p.amount),
+                    'status': p.status,
+                    'paid_date': str(p.paid_date) if p.paid_date else None,
+                }
+                for p in payments
+            ],
+            'contracts': [
+                {
+                    'id': str(c.id),
+                    'contract_type': c.contract_type,
+                    'status': c.status,
+                    'expiry_date': str(c.expiry_date) if c.expiry_date else None,
+                }
+                for c in contracts
+            ],
+            'technical_rider': rider_data,
+            'show_calls_count': show_calls.count(),
+            'post_show_reports_count': post_show.count(),
+            'financial_summary': {
+                'ticket_revenue': str(ticket_revenue),
+                'artist_costs_paid': str(paid_costs),
+                'net_position': str(ticket_revenue - paid_costs),
+            },
+        })
+
+    @action(detail=True, methods=['get'])
     def financials(self, request, pk=None):
         """Per-show P&L: budget approved, ticket revenue, artist costs."""
         from apps.ticketing.models import Booking, Ticket

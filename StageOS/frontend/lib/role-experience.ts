@@ -103,6 +103,7 @@ const allItems = {
   boxOffice:     { label: 'Box Office',               href: '/ticketing/bookings',        icon: CreditCard },
   tillRecon:     { label: 'Till Recon',               href: '/ticketing/reconciliation',  icon: Receipt },
   patrons:       { label: 'Patron CRM',               href: '/patrons',                   icon: Users2 },
+  seasonAnalytics: { label: 'Season Analytics',       href: '/programming/seasons',       icon: BarChart3 },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -132,6 +133,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
         label: 'Planning',
         items: [
           allItems.programming,
+          allItems.seasonAnalytics,
           allItems.tasks,
           allItems.documents,
           allItems.approvals,
@@ -167,6 +169,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.dashboard,
           allItems.calendar,
           allItems.workspaces,
+          allItems.seasonAnalytics,
           allItems.governance,
           allItems.budgets,
           allItems.boardMeetings,
@@ -227,6 +230,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.calendar,
       allItems.workspaces,
       departmentItem(kind),
+      ...(kind === 'programming' ? [allItems.seasonAnalytics] : []),
       allItems.tasks,
       allItems.documents,
       allItems.reports,

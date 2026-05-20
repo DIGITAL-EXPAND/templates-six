@@ -14,6 +14,7 @@ import {
   type FohAction,
 } from '@/components/operations/operations-components';
 import { PageHeader } from '@/components/ui/page-header';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState, ErrorState, LoadingState, PermissionDeniedState } from '@/components/ui/states';
 import { ApiError } from '@/lib/api/client';
 import {
@@ -23,9 +24,10 @@ import {
   fetchFohPlans,
   fetchIncidents,
   fetchOperatingContexts,
+  fetchStaffCalls,
   setFohPlanAction,
 } from '@/lib/api/endpoints';
-import type { ChecklistItem, FohPlanItem, IncidentItem, OperatingContextListItem, PostShowReportItem, ShowCallItem } from '@/lib/api/types';
+import type { ChecklistItem, FohPlanItem, IncidentItem, OperatingContextListItem, PostShowReportItem, ShowCallItem, StaffCallItem } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-provider';
 
 const SHOW_CALL_STATUS_COLOURS: Record<string, string> = {
@@ -164,6 +166,78 @@ function PostShowReportsSection({ token }: { token: string }) {
   );
 }
 
+const STAFF_CALL_STATUS_TONE: Record<string, 'info' | 'good' | 'neutral' | 'danger'> = {
+  scheduled: 'info',
+  confirmed: 'good',
+  completed: 'neutral',
+  cancelled: 'danger',
+  no_show: 'danger',
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  stage_manager: 'Stage Manager',
+  lighting_op: 'Lighting Op',
+  sound_op: 'Sound Op',
+  head_usher: 'Head Usher',
+  usher: 'Usher',
+  box_office: 'Box Office',
+  security: 'Security',
+  foh_manager: 'FOH Manager',
+  production_manager: 'Production Manager',
+};
+
+function toTitleCase(str: string) {
+  return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function StaffSchedulingSection({ token }: { token: string }) {
+  const [staffCalls, setStaffCalls] = useState<StaffCallItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    let mounted = true;
+    fetchStaffCalls(token)
+      .then((data) => { if (mounted) setStaffCalls(data); })
+      .catch(() => {})
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [token]);
+
+  if (loading) return <div className="py-8 text-center text-sm text-gray-400">Loading staff calls…</div>;
+  if (!staffCalls.length) return <div className="py-8 text-center text-sm text-gray-400">No staff calls found.</div>;
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            {['Show Call', 'Staff Member', 'Role', 'Call Time', 'Finish Time', 'Status'].map((h) => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {staffCalls.map((sc) => (
+            <tr key={sc.id} className="hover:bg-gray-50">
+              <td className="px-4 py-3 text-gray-500 font-mono text-xs">{sc.show_call.slice(0, 8)}</td>
+              <td className="px-4 py-3 text-gray-900 font-medium">{sc.staff_member_name || sc.staff_member}</td>
+              <td className="px-4 py-3 text-gray-700">{ROLE_LABELS[sc.role] ?? toTitleCase(sc.role)}</td>
+              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{sc.call_time}</td>
+              <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{sc.finish_time ?? '—'}</td>
+              <td className="px-4 py-3">
+                <StatusBadge tone={STAFF_CALL_STATUS_TONE[sc.status] ?? 'neutral'}>
+                  {sc.status.replace('_', ' ')}
+                </StatusBadge>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function OperationsPage() {
   const { tokens } = useAuth();
   const token = tokens?.access ?? '';
@@ -265,6 +339,12 @@ export default function OperationsPage() {
               <h2 className="text-base font-semibold text-gray-800">Post-Show Reports</h2>
               <p className="text-xs text-gray-500">Actual audience numbers, ratings and revenue collected per show.</p>
               <PostShowReportsSection token={token} />
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-gray-800">Staff Scheduling</h2>
+              <p className="text-xs text-gray-500">Crew and front-of-house staff assigned to show calls.</p>
+              <StaffSchedulingSection token={token} />
             </section>
           </>
         )}

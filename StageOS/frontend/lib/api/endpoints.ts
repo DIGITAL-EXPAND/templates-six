@@ -7,6 +7,11 @@ import type {
   ShareholderCompact,
   CompactTarget,
   IUFWIncident,
+  AGAuditRequest,
+  AGAuditEvidence,
+  ProductionLicence,
+  VenueRentalEnquiry,
+  SupplierCSDVerification,
   ArtistDocumentItem,
   TaskCommentItem,
   CreateTaskCommentPayload,
@@ -1602,4 +1607,46 @@ export async function createHospitalityRequest(token: string, payload: {
   });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to create hospitality request' });
   return r.json();
+}
+
+// Phase 8 endpoints
+export async function fetchAGAuditRequests(token: string) {
+  const res = await fetch('/api/v1/governance/ag-audit-requests/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: AGAuditRequest[] }>;
+}
+
+export async function fetchAGAuditEvidence(token: string, auditId: string) {
+  const res = await fetch(`/api/v1/governance/ag-audit-requests/${auditId}/evidence/`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<AGAuditEvidence[]>;
+}
+
+export async function fetchProductionLicences(token: string, contextId?: string) {
+  const qs = contextId ? `?operating_context=${contextId}` : '';
+  const res = await fetch(`/api/v1/programming/production-licences/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ProductionLicence[] }>;
+}
+
+export async function fetchRentalEnquiries(token: string) {
+  const res = await fetch('/api/v1/structure/rental-enquiries/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: VenueRentalEnquiry[] }>;
+}
+
+export async function createRentalEnquiry(token: string, payload: Partial<VenueRentalEnquiry>) {
+  const res = await fetch('/api/v1/structure/rental-enquiries/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<VenueRentalEnquiry>;
+}
+
+export async function fetchCSDVerifications(token: string) {
+  const res = await fetch('/api/v1/suppliers/csd-verifications/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: SupplierCSDVerification[] }>;
 }

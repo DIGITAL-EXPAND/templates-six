@@ -12,6 +12,8 @@ from .views import (
     UserDepartmentMembershipViewSet,
     VenueCapacityConfigViewSet,
     VenueViewSet,
+    VenueRentalEnquiryViewSet,
+    VenueRentalQuoteViewSet,
 )
 
 router = DefaultRouter()
@@ -27,5 +29,7 @@ router.register('approval-policies', ApprovalPolicyViewSet, basename='approval-p
 router.register('evidence-rules', EvidenceRuleViewSet, basename='evidence-rule')
 router.register('sop-templates', SOPTemplateViewSet, basename='sop-template')
 router.register('venue-capacity-configs', VenueCapacityConfigViewSet, basename='venue-capacity-config')
+router.register('rental-enquiries', VenueRentalEnquiryViewSet, basename='rental-enquiry')
+router.register('rental-quotes', VenueRentalQuoteViewSet, basename='rental-quote')
 
 urlpatterns = router.urls

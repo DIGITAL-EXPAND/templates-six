@@ -6,6 +6,7 @@ from .models import (
     DelegationMatrix, DelegationRule,
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
+    AGAuditRequest, AGAuditEvidence,
 )
 
 
@@ -383,3 +384,43 @@ class IUFWRecoverySerializer(serializers.ModelSerializer):
 
     def validate_incident(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'IUFW incident')
+
+
+# ── AG Audit ──────────────────────────────────────────────────────────────────
+
+class AGAuditEvidenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AGAuditEvidence
+        fields = [
+            'id', 'audit', 'category', 'description', 'document_reference',
+            'provided_by', 'provided_date', 'is_provided', 'ag_query_ref',
+            'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_audit(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'AG audit request')
+
+    def validate_provided_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Provided by')
+
+
+class AGAuditRequestSerializer(serializers.ModelSerializer):
+    evidence_items = AGAuditEvidenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AGAuditRequest
+        fields = [
+            'id', 'financial_year', 'audit_type', 'status',
+            'audit_coordinator', 'notice_date', 'fieldwork_start', 'fieldwork_end',
+            'draft_report_date', 'final_report_date', 'audit_outcome',
+            'management_response', 'notes', 'created_at', 'updated_at', 'evidence_items',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_audit_coordinator(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Audit coordinator')

@@ -399,3 +399,46 @@ class Performance(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.show.title} — {self.performance_date} {self.start_time}'
+
+
+# ── Production Licences ───────────────────────────────────────────────────────
+
+class LicensingBody(models.TextChoices):
+    SAMRO = 'samro', 'SAMRO (Performing Rights)'
+    RISA = 'risa', 'RISA (Recording Rights)'
+    CAPASSO = 'capasso', 'CAPASSO (Composers & Authors)'
+    DALRO = 'dalro', 'DALRO (Dramatic/Literary)'
+    FILMSA = 'filmsa', 'FILMSA (Film)'
+    OTHER = 'other', 'Other Licensing Body'
+
+class LicenceStatus(models.TextChoices):
+    NOT_REQUIRED = 'not_required', 'Not Required'
+    REQUIRED = 'required', 'Required — Not Applied'
+    APPLIED = 'applied', 'Application Submitted'
+    APPROVED = 'approved', 'Licence Approved'
+    PAID = 'paid', 'Licence Fee Paid'
+    RECEIVED = 'received', 'Licence Certificate Received'
+    EXPIRED = 'expired', 'Expired'
+    REJECTED = 'rejected', 'Rejected / Refused'
+
+class ProductionLicence(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.CASCADE, related_name='licences',
+    )
+    licensing_body = models.CharField(max_length=20, choices=LicensingBody.choices)
+    status = models.CharField(max_length=20, choices=LicenceStatus.choices, default=LicenceStatus.REQUIRED)
+    licence_number = models.CharField(max_length=100, blank=True)
+    application_date = models.DateField(null=True, blank=True)
+    approval_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fee_paid_date = models.DateField(null=True, blank=True)
+    certificate_reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('organisation', 'operating_context', 'licensing_body')]
+        ordering = ['operating_context', 'licensing_body']

@@ -7,7 +7,7 @@ from common.permissions import CanAccessPrivateIntake, IsTenantMember, UserRoles
 from .models import (
     CalendarIssue, CalendarIssueStatus, IntakeRequest, IntakeRequestStatus,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
-    Season, Show, Performance,
+    Season, Show, Performance, ProductionLicence,
 )
 from .serializers import (
     CalendarIssueActionSerializer, CalendarIssueSerializer,
@@ -15,6 +15,7 @@ from .serializers import (
     IntakeReviewSerializer, ProducerAssignmentSerializer,
     VenueHoldSerializer, CalendarSlotSerializer,
     SeasonSerializer, ShowSerializer, PerformanceSerializer,
+    ProductionLicenceSerializer,
 )
 from .services import (
     assign_producer, change_calendar_issue_status, convert_intake_to_context,
@@ -487,3 +488,23 @@ class PerformanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organisation_id=self.request.user.organisation_id)
+
+
+# ── Production Licences ───────────────────────────────────────────────────────
+
+class ProductionLicenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ProductionLicence.objects.select_related('operating_context')
+    serializer_class = ProductionLicenceSerializer
+    filterset_fields = ['operating_context', 'licensing_body', 'status']
+    search_fields = ['licence_number', 'certificate_reference', 'notes']
+    ordering = ['operating_context', 'licensing_body']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        operating_context = self.request.query_params.get('operating_context')
+        if operating_context:
+            qs = qs.filter(operating_context_id=operating_context)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

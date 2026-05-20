@@ -111,6 +111,10 @@ const allItems = {
   complianceCompact: { label: 'Shareholder Compact', href: '/governance/compliance', icon: Scale },
   iufw:             { label: 'IUFW Register',        href: '/governance/iufw',       icon: AlertTriangle },
   delegation:       { label: 'Delegation Matrix',    href: '/settings/delegation',   icon: ClipboardCheck },
+  agAudit:          { label: 'AG Audit',             href: '/governance/audit',      icon: BadgeCheck },
+  licences:         { label: 'IP Licences',          href: '/programming/licences',  icon: FileText },
+  rentals:          { label: 'Venue Rentals',        href: '/structure/rentals',     icon: Landmark },
+  csdRegister:      { label: 'CSD Register',         href: '/suppliers/csd',         icon: ClipboardCheck },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -149,6 +153,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.contracts,
           allItems.suppliers,
           allItems.artists,
+          allItems.licences,
+          allItems.rentals,
           allItems.patrons,
         ],
       },
@@ -161,11 +167,12 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.ticketing,
           allItems.youth,
           allItems.hospitality,
+          allItems.csdRegister,
         ],
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.iufw, allItems.reports, allItems.audit, allItems.settings, allItems.delegation, allItems.venueManagement],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.iufw, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -186,6 +193,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.boardMeetings,
           allItems.complianceCompact,
           allItems.iufw,
+          allItems.agAudit,
           allItems.reports,
           allItems.audit,
           allItems.tasks,

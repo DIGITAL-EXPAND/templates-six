@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_non_negative
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification
 
 
 class SupplierSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -162,3 +162,22 @@ class PurchaseOrderSerializer(ProtectedFieldsMixin, serializers.ModelSerializer)
         attrs = super().validate(attrs)
         require_non_negative(attrs, ['value', 'invoice_amount'])
         return attrs
+
+
+# ── CSD Verification ──────────────────────────────────────────────────────────
+
+class SupplierCSDVerificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplierCSDVerification
+        fields = [
+            'id', 'supplier', 'csd_supplier_number', 'verification_status',
+            'verification_date', 'verified_by',
+            'tax_compliance_status', 'tax_clearance_pin', 'tax_clearance_expiry',
+            'bee_level', 'bee_certificate_expiry',
+            'is_blacklisted', 'blacklist_reason', 'manual_override_notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'verified_by', 'created_at', 'updated_at']
+
+    def validate_supplier(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Supplier')

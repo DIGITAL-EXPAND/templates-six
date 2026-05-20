@@ -582,3 +582,67 @@ class IUFWRecovery(TenantOwnedModel):
     recovery_method = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ── AG Audit ──────────────────────────────────────────────────────────────────
+
+class AGAuditStatus(models.TextChoices):
+    NOTICE_RECEIVED = 'notice_received', 'Audit Notice Received'
+    PREPARATION = 'preparation', 'Preparation in Progress'
+    FIELDWORK = 'fieldwork', 'Fieldwork in Progress'
+    MANAGEMENT_COMMENTS = 'management_comments', 'Management Comments Stage'
+    DRAFT_REPORT = 'draft_report', 'Draft Report Received'
+    FINAL_REPORT = 'final_report', 'Final Report Received'
+    CLOSED = 'closed', 'Closed'
+
+class AGAuditRequest(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    financial_year = models.CharField(max_length=9)
+    audit_type = models.CharField(max_length=50, default='annual', choices=[
+        ('annual', 'Annual Financial Audit'),
+        ('performance', 'Performance Audit'),
+        ('compliance', 'Compliance Audit'),
+        ('interim', 'Interim Audit'),
+    ])
+    status = models.CharField(max_length=25, choices=AGAuditStatus.choices, default=AGAuditStatus.NOTICE_RECEIVED)
+    audit_coordinator = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='coordinated_audits')
+    notice_date = models.DateField(null=True, blank=True)
+    fieldwork_start = models.DateField(null=True, blank=True)
+    fieldwork_end = models.DateField(null=True, blank=True)
+    draft_report_date = models.DateField(null=True, blank=True)
+    final_report_date = models.DateField(null=True, blank=True)
+    audit_outcome = models.CharField(max_length=30, blank=True, choices=[
+        ('clean', 'Clean Audit'),
+        ('unqualified_emphasis', 'Unqualified with Emphasis of Matter'),
+        ('qualified', 'Qualified Opinion'),
+        ('adverse', 'Adverse Opinion'),
+        ('disclaimer', 'Disclaimer of Opinion'),
+    ])
+    management_response = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class AGEvidenceCategory(models.TextChoices):
+    FINANCIAL_STATEMENTS = 'financial_statements', 'Financial Statements'
+    GOVERNANCE = 'governance', 'Governance Documents'
+    PROCUREMENT = 'procurement', 'Procurement Records'
+    CONTRACTS = 'contracts', 'Contracts'
+    IUFW = 'iufw', 'IUFW Evidence'
+    PERFORMANCE = 'performance', 'Performance Evidence'
+    COMPLIANCE = 'compliance', 'Compliance Documents'
+    HR = 'hr', 'Human Resources'
+    OTHER = 'other', 'Other'
+
+class AGAuditEvidence(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    audit = models.ForeignKey(AGAuditRequest, on_delete=models.CASCADE, related_name='evidence_items')
+    category = models.CharField(max_length=25, choices=AGEvidenceCategory.choices)
+    description = models.CharField(max_length=255)
+    document_reference = models.CharField(max_length=100, blank=True)
+    provided_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='ag_evidence_provided')
+    provided_date = models.DateField(null=True, blank=True)
+    is_provided = models.BooleanField(default=False)
+    ag_query_ref = models.CharField(max_length=100, blank=True, help_text='AG query/finding reference number')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

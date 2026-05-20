@@ -4,7 +4,7 @@ from common.serializers import check_tenant_fk, validate_unique_context, Protect
 from .models import (
     CalendarIssue, IntakeRequest, IntakeRequestStatus, IntakeRequestType,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
-    Season, Show, Performance,
+    Season, Show, Performance, ProductionLicence,
 )
 
 
@@ -239,3 +239,20 @@ class PerformanceSerializer(serializers.ModelSerializer):
 
     def validate_space(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Space')
+
+
+# ── Production Licences ───────────────────────────────────────────────────────
+
+class ProductionLicenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductionLicence
+        fields = [
+            'id', 'operating_context', 'licensing_body', 'status',
+            'licence_number', 'application_date', 'approval_date', 'expiry_date',
+            'fee_amount', 'fee_paid_date', 'certificate_reference',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')

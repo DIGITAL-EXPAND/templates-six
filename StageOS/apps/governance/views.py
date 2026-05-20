@@ -14,6 +14,7 @@ from .models import (
     DelegationMatrix, DelegationRule,
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
+    AGAuditRequest, AGAuditEvidence,
 )
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
@@ -25,6 +26,7 @@ from .serializers import (
     DelegationMatrixSerializer, DelegationRuleSerializer,
     ShareholderCompactSerializer, CompactTargetSerializer, CompactActualSerializer, FundingTrancheSerializer,
     IUFWIncidentSerializer, IUFWInvestigationSerializer, IUFWRecoverySerializer,
+    AGAuditRequestSerializer, AGAuditEvidenceSerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -455,3 +457,36 @@ class IUFWRecoveryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     serializer_class = IUFWRecoverySerializer
     filterset_fields = ['incident']
     ordering = ['-recovery_date']
+
+
+# ── AG Audit ──────────────────────────────────────────────────────────────────
+
+class AGAuditRequestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AGAuditRequest.objects.select_related('audit_coordinator').prefetch_related('evidence_items')
+    serializer_class = AGAuditRequestSerializer
+    filterset_fields = ['status', 'audit_type', 'financial_year']
+    search_fields = ['financial_year', 'notes', 'management_response']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['get'])
+    def evidence(self, request, pk=None):
+        audit = self.get_object()
+        qs = AGAuditEvidence.objects.filter(
+            audit=audit,
+            organisation_id=request.user.organisation_id,
+        ).select_related('provided_by').order_by('category', 'description')
+        return Response(AGAuditEvidenceSerializer(qs, many=True, context={'request': request}).data)
+
+
+class AGAuditEvidenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AGAuditEvidence.objects.select_related('audit', 'provided_by')
+    serializer_class = AGAuditEvidenceSerializer
+    filterset_fields = ['audit', 'category', 'is_provided']
+    search_fields = ['description', 'document_reference', 'ag_query_ref']
+    ordering = ['category', 'description']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

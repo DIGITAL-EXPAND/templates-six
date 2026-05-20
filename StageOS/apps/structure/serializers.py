@@ -13,6 +13,8 @@ from .models import (
     UserDepartmentMembership,
     Venue,
     VenueCapacityConfig,
+    VenueRentalEnquiry,
+    VenueRentalQuote,
 )
 
 
@@ -198,3 +200,67 @@ class VenueCapacityConfigSerializer(serializers.ModelSerializer):
 
     def validate_space(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Space')
+
+
+# ── Venue Rental ──────────────────────────────────────────────────────────────
+
+class VenueRentalQuoteSerializer(serializers.ModelSerializer):
+    subtotal = serializers.SerializerMethodField()
+    vat_amount = serializers.SerializerMethodField()
+    total_inc_vat = serializers.SerializerMethodField()
+    deposit_amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VenueRentalQuote
+        fields = [
+            'id', 'enquiry', 'quote_number',
+            'venue_hire_fee', 'technical_fee', 'catering_fee', 'security_fee', 'other_fee',
+            'vat_rate', 'deposit_percentage', 'valid_until', 'is_accepted', 'notes',
+            'subtotal', 'vat_amount', 'total_inc_vat', 'deposit_amount',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def get_subtotal(self, obj):
+        return str(obj.subtotal)
+
+    def get_vat_amount(self, obj):
+        return str(obj.vat_amount)
+
+    def get_total_inc_vat(self, obj):
+        return str(obj.total_inc_vat)
+
+    def get_deposit_amount(self, obj):
+        return str(obj.deposit_amount)
+
+    def validate_enquiry(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Rental enquiry')
+
+
+class VenueRentalEnquirySerializer(serializers.ModelSerializer):
+    quotes = VenueRentalQuoteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = VenueRentalEnquiry
+        fields = [
+            'id', 'reference_number', 'venue', 'space',
+            'client_name', 'client_email', 'client_phone', 'client_organisation',
+            'event_type', 'event_name', 'event_date', 'event_end_date', 'setup_date',
+            'expected_attendance', 'status', 'assigned_to',
+            'special_requirements', 'internal_notes',
+            'created_at', 'updated_at', 'quotes',
+        ]
+        read_only_fields = ['id', 'reference_number', 'created_at', 'updated_at']
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_space(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Space')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')

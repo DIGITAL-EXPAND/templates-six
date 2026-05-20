@@ -375,3 +375,80 @@ class SOPTemplate(TenantOwnedModel):
 
     def __str__(self):
         return self.title
+
+
+# ── Venue Rental ──────────────────────────────────────────────────────────────
+
+class RentalEnquiryStatus(models.TextChoices):
+    NEW = 'new', 'New Enquiry'
+    AVAILABILITY_CHECKED = 'availability_checked', 'Availability Checked'
+    QUOTE_SENT = 'quote_sent', 'Quote Sent'
+    QUOTE_ACCEPTED = 'quote_accepted', 'Quote Accepted'
+    AGREEMENT_DRAFTED = 'agreement_drafted', 'Agreement Drafted'
+    AGREEMENT_SIGNED = 'agreement_signed', 'Agreement Signed'
+    DEPOSIT_RECEIVED = 'deposit_received', 'Deposit Received'
+    CONFIRMED = 'confirmed', 'Confirmed'
+    COMPLETED = 'completed', 'Completed'
+    CANCELLED = 'cancelled', 'Cancelled'
+
+class VenueRentalEnquiry(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reference_number = models.CharField(max_length=50, blank=True)
+    venue = models.ForeignKey('Venue', on_delete=models.PROTECT, related_name='rental_enquiries')
+    space = models.ForeignKey('Space', on_delete=models.PROTECT, null=True, blank=True, related_name='rental_enquiries')
+    client_name = models.CharField(max_length=255)
+    client_email = models.EmailField()
+    client_phone = models.CharField(max_length=30, blank=True)
+    client_organisation = models.CharField(max_length=255, blank=True)
+    event_type = models.CharField(max_length=100)
+    event_name = models.CharField(max_length=255)
+    event_date = models.DateField()
+    event_end_date = models.DateField(null=True, blank=True)
+    setup_date = models.DateField(null=True, blank=True)
+    expected_attendance = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=25, choices=RentalEnquiryStatus.choices, default=RentalEnquiryStatus.NEW)
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='rental_enquiries')
+    special_requirements = models.TextField(blank=True)
+    internal_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            import datetime
+            year = datetime.date.today().year
+            count = VenueRentalEnquiry.objects.filter(organisation=self.organisation).count() + 1
+            self.reference_number = f'VRE-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+class VenueRentalQuote(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enquiry = models.ForeignKey(VenueRentalEnquiry, on_delete=models.CASCADE, related_name='quotes')
+    quote_number = models.CharField(max_length=50, blank=True)
+    venue_hire_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    technical_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    catering_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    security_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    other_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15)
+    deposit_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=50)
+    valid_until = models.DateField(null=True, blank=True)
+    is_accepted = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def subtotal(self):
+        return self.venue_hire_fee + self.technical_fee + self.catering_fee + self.security_fee + self.other_fee
+
+    @property
+    def vat_amount(self):
+        return self.subtotal * (self.vat_rate / 100)
+
+    @property
+    def total_inc_vat(self):
+        return self.subtotal + self.vat_amount
+
+    @property
+    def deposit_amount(self):
+        return self.total_inc_vat * (self.deposit_percentage / 100)

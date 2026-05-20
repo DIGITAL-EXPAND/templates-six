@@ -7,6 +7,7 @@ from .views import (
     DelegationMatrixViewSet, DelegationRuleViewSet,
     ShareholderCompactViewSet, CompactTargetViewSet, CompactActualViewSet, FundingTrancheViewSet,
     IUFWIncidentViewSet, IUFWInvestigationViewSet, IUFWRecoveryViewSet,
+    AGAuditRequestViewSet, AGAuditEvidenceViewSet,
 )
 
 router = DefaultRouter()
@@ -28,5 +29,7 @@ router.register('funding-tranches', FundingTrancheViewSet, basename='funding-tra
 router.register('iufw-incidents', IUFWIncidentViewSet, basename='iufw-incident')
 router.register('iufw-investigations', IUFWInvestigationViewSet, basename='iufw-investigation')
 router.register('iufw-recoveries', IUFWRecoveryViewSet, basename='iufw-recovery')
+router.register('ag-audit-requests', AGAuditRequestViewSet, basename='ag-audit-request')
+router.register('ag-audit-evidence', AGAuditEvidenceViewSet, basename='ag-audit-evidence')
 
 urlpatterns = router.urls

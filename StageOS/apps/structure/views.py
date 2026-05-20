@@ -1,4 +1,6 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from common.views import TenantScopedMixin
 from .models import (
     ApprovalPolicy,
@@ -13,6 +15,8 @@ from .models import (
     UserDepartmentMembership,
     Venue,
     VenueCapacityConfig,
+    VenueRentalEnquiry,
+    VenueRentalQuote,
 )
 from .serializers import (
     ApprovalPolicySerializer,
@@ -27,6 +31,8 @@ from .serializers import (
     UserDepartmentMembershipSerializer,
     VenueCapacityConfigSerializer,
     VenueSerializer,
+    VenueRentalEnquirySerializer,
+    VenueRentalQuoteSerializer,
 )
 
 
@@ -90,3 +96,38 @@ class VenueCapacityConfigViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     serializer_class = VenueCapacityConfigSerializer
     filterset_fields = ['space', 'configuration', 'is_default']
     ordering = ['space', 'configuration']
+
+
+# ── Venue Rental ──────────────────────────────────────────────────────────────
+
+class VenueRentalEnquiryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = VenueRentalEnquiry.objects.select_related('venue', 'space', 'assigned_to').prefetch_related('quotes')
+    serializer_class = VenueRentalEnquirySerializer
+    filterset_fields = ['venue', 'space', 'status', 'assigned_to']
+    search_fields = ['reference_number', 'client_name', 'client_email', 'event_name', 'event_type']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def quote(self, request, pk=None):
+        enquiry = self.get_object()
+        data = request.data.copy()
+        data['enquiry'] = str(enquiry.id)
+        serializer = VenueRentalQuoteSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        quote = serializer.save(organisation_id=request.user.organisation_id)
+        enquiry.status = 'quote_sent'
+        enquiry.save(update_fields=['status'])
+        return Response(VenueRentalQuoteSerializer(quote, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class VenueRentalQuoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = VenueRentalQuote.objects.select_related('enquiry')
+    serializer_class = VenueRentalQuoteSerializer
+    filterset_fields = ['enquiry', 'is_accepted']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

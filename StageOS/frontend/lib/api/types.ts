@@ -1940,6 +1940,98 @@ export interface IUFWIncident {
   agsa_reference: string;
 }
 
+// Phase 8 types
+export interface AGAuditEvidence {
+  id: string;
+  category: string;
+  description: string;
+  document_reference: string;
+  is_provided: boolean;
+  ag_query_ref: string;
+  notes: string;
+  provided_date: string | null;
+}
+
+export interface AGAuditRequest {
+  id: string;
+  financial_year: string;
+  audit_type: string;
+  status: string;
+  notice_date: string | null;
+  fieldwork_start: string | null;
+  fieldwork_end: string | null;
+  draft_report_date: string | null;
+  final_report_date: string | null;
+  audit_outcome: string;
+  management_response: string;
+  evidence_items?: AGAuditEvidence[];
+}
+
+export interface ProductionLicence {
+  id: string;
+  operating_context: string;
+  licensing_body: string;
+  status: string;
+  licence_number: string;
+  application_date: string | null;
+  approval_date: string | null;
+  expiry_date: string | null;
+  fee_amount: string | null;
+  fee_paid_date: string | null;
+  notes: string;
+}
+
+export interface VenueRentalEnquiry {
+  id: string;
+  reference_number: string;
+  client_name: string;
+  client_email: string;
+  client_phone: string;
+  client_organisation: string;
+  event_type: string;
+  event_name: string;
+  event_date: string;
+  event_end_date: string | null;
+  expected_attendance: number;
+  status: string;
+  special_requirements: string;
+  venue: string;
+  space: string | null;
+}
+
+export interface VenueRentalQuote {
+  id: string;
+  enquiry: string;
+  quote_number: string;
+  venue_hire_fee: string;
+  technical_fee: string;
+  catering_fee: string;
+  security_fee: string;
+  other_fee: string;
+  vat_rate: string;
+  deposit_percentage: string;
+  subtotal: number;
+  vat_amount: number;
+  total_inc_vat: number;
+  deposit_amount: number;
+  valid_until: string | null;
+  is_accepted: boolean;
+}
+
+export interface SupplierCSDVerification {
+  id: string;
+  supplier: string;
+  csd_supplier_number: string;
+  verification_status: string;
+  verification_date: string | null;
+  tax_compliance_status: string;
+  tax_clearance_expiry: string | null;
+  bee_level: number | null;
+  bee_certificate_expiry: string | null;
+  is_blacklisted: boolean;
+  blacklist_reason: string;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

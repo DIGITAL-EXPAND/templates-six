@@ -8,11 +8,12 @@ from common.views import TenantScopedMixin
 from common.permissions import (
     CanAccessSupplierData, CanAccessFinance, IsTenantMember, UserRoles, user_type,
 )
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification
 from .serializers import (
     SupplierSerializer, SupplierDocumentSerializer,
     SupplierEngagementSerializer, PaymentPackSerializer,
     PurchaseRequisitionSerializer, PurchaseOrderSerializer,
+    SupplierCSDVerificationSerializer,
 )
 from .services import (
     verify_supplier, send_payment_to_erp, upload_supplier_document,
@@ -145,3 +146,43 @@ class PurchaseOrderViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── CSD Verification ──────────────────────────────────────────────────────────
+
+class SupplierCSDVerificationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = SupplierCSDVerification.objects.select_related('supplier', 'verified_by')
+    serializer_class = SupplierCSDVerificationSerializer
+    filterset_fields = ['supplier', 'verification_status', 'is_blacklisted']
+    search_fields = ['csd_supplier_number', 'tax_clearance_pin']
+    ordering = ['-verification_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=False, methods=['post'])
+    def verify(self, request):
+        supplier_id = request.data.get('supplier_id')
+        if not supplier_id:
+            return Response(
+                {'supplier_id': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            supplier = Supplier.objects.get(id=supplier_id, organisation=request.user.organisation)
+        except Supplier.DoesNotExist:
+            return Response(
+                {'supplier_id': 'Supplier not found in your organisation.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        verification = SupplierCSDVerification.objects.create(
+            organisation=request.user.organisation,
+            supplier=supplier,
+            verification_status='verified',
+            verification_date=timezone.now().date(),
+            verified_by=request.user,
+        )
+        return Response(
+            SupplierCSDVerificationSerializer(verification, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )

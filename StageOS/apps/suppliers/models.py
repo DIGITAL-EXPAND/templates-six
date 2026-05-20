@@ -256,3 +256,39 @@ class PurchaseOrder(TenantOwnedModel):
 
     def __str__(self):
         return f'PO-{self.po_number or self.id}: {self.supplier} [{self.status}]'
+
+
+# ── CSD Verification ──────────────────────────────────────────────────────────
+
+class CSDVerificationStatus(models.TextChoices):
+    NOT_VERIFIED = 'not_verified', 'Not Verified'
+    PENDING = 'pending', 'Verification Pending'
+    VERIFIED = 'verified', 'Verified on CSD'
+    FAILED = 'failed', 'Verification Failed'
+    EXPIRED = 'expired', 'Verification Expired (>30 days)'
+    EXCLUDED = 'excluded', 'Excluded / Blocked Supplier'
+
+class SupplierCSDVerification(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    supplier = models.ForeignKey('Supplier', on_delete=models.CASCADE, related_name='csd_verifications')
+    csd_supplier_number = models.CharField(max_length=100, blank=True)
+    verification_status = models.CharField(max_length=20, choices=CSDVerificationStatus.choices, default=CSDVerificationStatus.NOT_VERIFIED)
+    verification_date = models.DateField(null=True, blank=True)
+    verified_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='csd_verifications_performed')
+    tax_compliance_status = models.CharField(max_length=20, blank=True, choices=[
+        ('compliant', 'Tax Compliant'),
+        ('non_compliant', 'Non-Compliant'),
+        ('unknown', 'Unknown'),
+    ])
+    tax_clearance_pin = models.CharField(max_length=100, blank=True)
+    tax_clearance_expiry = models.DateField(null=True, blank=True)
+    bee_level = models.PositiveSmallIntegerField(null=True, blank=True)
+    bee_certificate_expiry = models.DateField(null=True, blank=True)
+    is_blacklisted = models.BooleanField(default=False)
+    blacklist_reason = models.TextField(blank=True)
+    manual_override_notes = models.TextField(blank=True, help_text='Reason if PO approved despite failed CSD check')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-verification_date']

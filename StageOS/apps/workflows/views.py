@@ -47,6 +47,29 @@ class WorkflowInstanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         )
         serializer.instance = instance
 
+    @action(detail=False, methods=['post'])
+    def launch(self, request):
+        """Start a workflow template for an operating context."""
+        template_id = request.data.get('template')
+        context_id = request.data.get('operating_context')
+        if not template_id or not context_id:
+            return Response(
+                {'detail': 'template and operating_context are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            template = WorkflowTemplate.objects.get(id=template_id, organisation=request.user.organisation)
+            context = __import__('apps.contexts.models', fromlist=['OperatingContext']).OperatingContext.objects.get(
+                id=context_id, organisation=request.user.organisation,
+            )
+        except (WorkflowTemplate.DoesNotExist, Exception):
+            return Response({'detail': 'Template or context not found.'}, status=status.HTTP_404_NOT_FOUND)
+        instance = instantiate_workflow(context=context, template=template, user=request.user)
+        return Response(
+            WorkflowInstanceSerializer(instance, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
 
 class WorkflowStepInstanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = WorkflowStepInstance.objects.select_related(
@@ -99,3 +122,15 @@ class WorkflowStepInstanceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             approval_request=approval_request,
         )
         return Response(WorkflowStepInstanceSerializer(updated, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def skip(self, request, pk=None):
+        """Admin-only override to skip a step."""
+        step = self.get_object()
+        step.status = 'skipped'
+        from django.utils import timezone as tz
+        step.completed_at = tz.now()
+        step.completed_by = request.user
+        step.notes = request.data.get('notes', 'Skipped by admin override.')
+        step.save(update_fields=['status', 'completed_at', 'completed_by', 'notes'])
+        return Response(WorkflowStepInstanceSerializer(step, context={'request': request}).data)

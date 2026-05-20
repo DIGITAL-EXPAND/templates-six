@@ -49,6 +49,23 @@ class HospitalityRequestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         obj.save(update_fields=['status', 'updated_at'])
         return Response(HospitalityRequestSerializer(obj, context={'request': request}).data)
 
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        """Assign a hospitality request to a staff member."""
+        from apps.accounts.models import User
+        obj = self.get_object()
+        user_id = request.data.get('assigned_to')
+        if not user_id:
+            return Response({'detail': 'assigned_to is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = User.objects.get(id=user_id, organisation=request.user.organisation)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        obj.assigned_to = user
+        obj.save(update_fields=['assigned_to', 'updated_at'])
+        from .serializers import HospitalityRequestSerializer
+        return Response(HospitalityRequestSerializer(obj, context={'request': request}).data)
+
 
 class HospitalityNoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = HospitalityNote.objects.select_related('hospitality_request', 'created_by')

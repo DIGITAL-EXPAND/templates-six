@@ -111,6 +111,7 @@ import type {
   BoardPackData,
   VenueCapacityConfigItem,
   ShowItem,
+  SeasonCloseOut,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1495,4 +1496,51 @@ export async function fetchSpacesForVenue(token: string): Promise<{ id: string; 
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load spaces' });
   const data = await r.json();
   return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+// Phase 6 endpoints
+export async function launchWorkflow(token: string, templateId: string, contextId: string): Promise<WorkflowInstanceItem> {
+  const r = await fetch('/api/v1/workflows/instances/launch/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template: templateId, operating_context: contextId }),
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to launch workflow' });
+  return r.json();
+}
+
+export async function fetchSeasonCloseOut(token: string, seasonId: string): Promise<SeasonCloseOut> {
+  const r = await fetch(`/api/v1/programming/seasons/${seasonId}/close_out_summary/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load season close-out' });
+  return r.json();
+}
+
+export async function closeOutShow(token: string, showId: string): Promise<{ show_id: string; title: string; status: string; ticket_revenue: string; artist_costs_paid: string; net_position: string; message: string }> {
+  const r = await fetch(`/api/v1/programming/shows/${showId}/close_out/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to close out show' });
+  return r.json();
+}
+
+export async function createHospitalityRequest(token: string, payload: {
+  request_type: string;
+  event_date: string;
+  guest_count: number;
+  contact_name: string;
+  contact_phone?: string;
+  special_requirements?: string;
+  dietary_restrictions?: string;
+  operating_context?: string | null;
+}): Promise<{ id: string; status: string; contact_name: string; event_date: string; request_type: string }> {
+  const r = await fetch('/api/v1/hospitality/requests/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to create hospitality request' });
+  return r.json();
 }

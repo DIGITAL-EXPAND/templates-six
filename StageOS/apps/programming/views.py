@@ -264,6 +264,51 @@ class SeasonViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         })
 
 
+    @action(detail=True, methods=['get'])
+    def close_out_summary(self, request, pk=None):
+        """Season close-out: aggregate financials across all shows."""
+        from apps.ticketing.models import Ticket, Booking
+        from apps.artists.models import ArtistPayment
+        season = self.get_object()
+        org = request.user.organisation
+        shows = season.shows.filter(organisation=org)
+        show_summaries = []
+        total_revenue = 0
+        total_costs = 0
+        for show in shows:
+            performances = show.performances.filter(organisation=org)
+            bookings = Booking.objects.filter(performance__in=performances)
+            rev = Ticket.objects.filter(booking__in=bookings).aggregate(
+                t=models.Sum('amount'))['t'] or 0
+            costs = ArtistPayment.objects.filter(
+                engagement__operating_context=show.operating_context,
+                status='paid', organisation=org,
+            ).aggregate(t=models.Sum('amount'))['t'] or 0
+            total_revenue += rev
+            total_costs += costs
+            ctx = show.operating_context
+            show_summaries.append({
+                'show_id': str(show.id),
+                'title': ctx.title if ctx else '',
+                'status': ctx.status if ctx else '',
+                'performances': performances.count(),
+                'ticket_revenue': str(rev),
+                'artist_costs': str(costs),
+                'net': str(rev - costs),
+            })
+        return Response({
+            'season_id': str(season.id),
+            'season_name': season.name,
+            'year': season.year,
+            'shows': show_summaries,
+            'totals': {
+                'total_revenue': str(total_revenue),
+                'total_costs': str(total_costs),
+                'net_position': str(total_revenue - total_costs),
+            },
+        })
+
+
 class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = Show.objects.select_related('operating_context', 'season')
     serializer_class = ShowSerializer
@@ -371,6 +416,35 @@ class ShowViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 'artist_costs_paid': str(paid_costs),
                 'net_position': str(ticket_revenue - paid_costs),
             },
+        })
+
+    @action(detail=True, methods=['post'])
+    def close_out(self, request, pk=None):
+        """Mark a show as completed and generate final financial summary."""
+        from apps.ticketing.models import Booking, Ticket
+        from apps.artists.models import ArtistPayment
+        show = self.get_object()
+        ctx = show.operating_context
+        if ctx:
+            ctx.status = 'completed'
+            ctx.save(update_fields=['status'])
+        org = request.user.organisation
+        performances = show.performances.filter(organisation=org)
+        bookings = Booking.objects.filter(performance__in=performances)
+        ticket_revenue = Ticket.objects.filter(
+            booking__in=bookings
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        paid_costs = ArtistPayment.objects.filter(
+            engagement__operating_context=ctx, status='paid', organisation=org
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        return Response({
+            'show_id': str(show.id),
+            'title': ctx.title if ctx else '',
+            'status': 'completed',
+            'ticket_revenue': str(ticket_revenue),
+            'artist_costs_paid': str(paid_costs),
+            'net_position': str(ticket_revenue - paid_costs),
+            'message': 'Show closed out successfully.',
         })
 
     @action(detail=True, methods=['get'])

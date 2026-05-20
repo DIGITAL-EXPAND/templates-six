@@ -1839,3 +1839,24 @@ export type ShowItem = {
   season: string | null;
   created_at: string;
 };
+
+// Phase 6 types
+export type SeasonCloseOut = {
+  season_id: string;
+  season_name: string;
+  year: number;
+  shows: {
+    show_id: string;
+    title: string;
+    status: string;
+    performances: number;
+    ticket_revenue: string;
+    artist_costs: string;
+    net: string;
+  }[];
+  totals: {
+    total_revenue: string;
+    total_costs: string;
+    net_position: string;
+  };
+};

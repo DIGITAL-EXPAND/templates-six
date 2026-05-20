@@ -8,7 +8,13 @@ from common.permissions import CanCreateExecutiveIntervention
 from common.views import TenantScopedMixin
 from apps.contexts.models import OperatingContext
 from apps.documents.models import Document
-from .models import KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction, Budget, BudgetLine, BoardMeeting, BoardResolution
+from .models import (
+    KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction,
+    Budget, BudgetLine, BoardMeeting, BoardResolution,
+    DelegationMatrix, DelegationRule,
+    ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
+    IUFWIncident, IUFWInvestigation, IUFWRecovery,
+)
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
     KPISerializer, KPIEvidenceSerializer, ReportKPISerializer,
@@ -16,6 +22,9 @@ from .serializers import (
     CorrectiveActionSerializer,
     BudgetSerializer, BudgetLineSerializer,
     BoardMeetingSerializer, BoardResolutionSerializer,
+    DelegationMatrixSerializer, DelegationRuleSerializer,
+    ShareholderCompactSerializer, CompactTargetSerializer, CompactActualSerializer, FundingTrancheSerializer,
+    IUFWIncidentSerializer, IUFWInvestigationSerializer, IUFWRecoverySerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -291,3 +300,158 @@ class BoardResolutionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Delegation Framework ──────────────────────────────────────────────────────
+
+class DelegationMatrixViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = DelegationMatrix.objects.select_related('approved_by').prefetch_related('rules')
+    serializer_class = DelegationMatrixSerializer
+    filterset_fields = ['is_active']
+    search_fields = ['name', 'notes']
+    ordering = ['-effective_date']
+
+    @action(detail=True, methods=['get'])
+    def rules(self, request, pk=None):
+        matrix = self.get_object()
+        qs = DelegationRule.objects.filter(
+            matrix=matrix,
+            organisation_id=request.user.organisation_id,
+        ).order_by('category', 'threshold_amount')
+        return Response(DelegationRuleSerializer(qs, many=True, context={'request': request}).data)
+
+
+class DelegationRuleViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = DelegationRule.objects.select_related('matrix')
+    serializer_class = DelegationRuleSerializer
+    filterset_fields = ['matrix', 'category', 'delegated_to']
+    search_fields = ['action_description', 'notes']
+    ordering = ['category', 'threshold_amount']
+
+
+# ── Shareholder Compact ───────────────────────────────────────────────────────
+
+class ShareholderCompactViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ShareholderCompact.objects.prefetch_related('targets__actuals', 'tranches')
+    serializer_class = ShareholderCompactSerializer
+    filterset_fields = ['status', 'financial_year']
+    search_fields = ['financial_year', 'executive_authority', 'notes']
+    ordering = ['-financial_year']
+
+    @action(detail=True, methods=['get'])
+    def progress(self, request, pk=None):
+        compact = self.get_object()
+        targets = compact.targets.prefetch_related('actuals').all()
+        result = []
+        for target in targets:
+            actuals = list(target.actuals.all())
+            actuals_data = CompactActualSerializer(actuals, many=True, context={'request': request}).data
+            # Compute simple % achievement: count quarters with actuals vs 4
+            quarters_reported = len(actuals)
+            achievement_pct = round((quarters_reported / 4) * 100, 1)
+            result.append({
+                'target': CompactTargetSerializer(target, context={'request': request}).data,
+                'actuals': actuals_data,
+                'quarters_reported': quarters_reported,
+                'achievement_pct': achievement_pct,
+            })
+        return Response({
+            'compact_id': str(compact.id),
+            'financial_year': compact.financial_year,
+            'status': compact.status,
+            'targets': result,
+        })
+
+
+class CompactTargetViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CompactTarget.objects.select_related('compact').prefetch_related('actuals')
+    serializer_class = CompactTargetSerializer
+    filterset_fields = ['compact', 'category']
+    search_fields = ['indicator_name']
+    ordering = ['category', 'indicator_name']
+
+
+class CompactActualViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CompactActual.objects.select_related('target', 'reported_by')
+    serializer_class = CompactActualSerializer
+    filterset_fields = ['target', 'quarter']
+    ordering = ['target', 'quarter']
+
+
+class FundingTrancheViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = FundingTranche.objects.select_related('compact')
+    serializer_class = FundingTrancheSerializer
+    filterset_fields = ['compact', 'is_received']
+    ordering = ['tranche_number']
+
+
+# ── IUFW ─────────────────────────────────────────────────────────────────────
+
+class IUFWIncidentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = IUFWIncident.objects.select_related('responsible_person')
+    serializer_class = IUFWIncidentSerializer
+    filterset_fields = ['iufw_type', 'status', 'financial_year', 'reported_to_board', 'reported_to_ag']
+    search_fields = ['description', 'reference_number', 'responsible_description', 'root_cause']
+    ordering = ['-discovered_date']
+
+    @action(detail=False, methods=['get'])
+    def register(self, request):
+        from django.db.models import Sum, Count
+        # Default to current financial year based on today's date
+        today = timezone.now().date()
+        if today.month >= 4:
+            fy = f'{today.year}/{today.year + 1}'
+        else:
+            fy = f'{today.year - 1}/{today.year}'
+
+        financial_year = request.query_params.get('financial_year', fy)
+        org_id = request.user.organisation_id
+
+        incidents = IUFWIncident.objects.filter(
+            organisation_id=org_id,
+            financial_year=financial_year,
+        ).order_by('iufw_type', '-discovered_date')
+
+        # Group by type with totals
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        totals = defaultdict(lambda: {'count': 0, 'amount': 0})
+
+        for incident in incidents:
+            grouped[incident.iufw_type].append(
+                IUFWIncidentSerializer(incident, context={'request': request}).data
+            )
+            totals[incident.iufw_type]['count'] += 1
+            totals[incident.iufw_type]['amount'] += float(incident.amount)
+
+        grand_total_amount = sum(t['amount'] for t in totals.values())
+        grand_total_count = sum(t['count'] for t in totals.values())
+
+        register_data = {}
+        for iufw_type, incident_list in grouped.items():
+            register_data[iufw_type] = {
+                'incidents': incident_list,
+                'count': totals[iufw_type]['count'],
+                'total_amount': totals[iufw_type]['amount'],
+            }
+
+        return Response({
+            'financial_year': financial_year,
+            'grand_total_count': grand_total_count,
+            'grand_total_amount': grand_total_amount,
+            'by_type': register_data,
+        })
+
+
+class IUFWInvestigationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = IUFWInvestigation.objects.select_related('incident', 'investigator')
+    serializer_class = IUFWInvestigationSerializer
+    filterset_fields = ['incident', 'disciplinary_recommended', 'criminal_referral_recommended']
+    ordering = ['-commenced_date']
+
+
+class IUFWRecoveryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = IUFWRecovery.objects.select_related('incident')
+    serializer_class = IUFWRecoverySerializer
+    filterset_fields = ['incident']
+    ordering = ['-recovery_date']

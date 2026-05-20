@@ -4,6 +4,9 @@ from .views import (
     RiskViewSet, CorrectiveActionViewSet,
     BudgetViewSet, BudgetLineViewSet,
     BoardMeetingViewSet, BoardResolutionViewSet,
+    DelegationMatrixViewSet, DelegationRuleViewSet,
+    ShareholderCompactViewSet, CompactTargetViewSet, CompactActualViewSet, FundingTrancheViewSet,
+    IUFWIncidentViewSet, IUFWInvestigationViewSet, IUFWRecoveryViewSet,
 )
 
 router = DefaultRouter()
@@ -16,5 +19,14 @@ router.register('budgets', BudgetViewSet, basename='budget')
 router.register('budget-lines', BudgetLineViewSet, basename='budget-line')
 router.register('board-meetings', BoardMeetingViewSet, basename='board-meeting')
 router.register('board-resolutions', BoardResolutionViewSet, basename='board-resolution')
+router.register('delegation-matrices', DelegationMatrixViewSet, basename='delegation-matrix')
+router.register('delegation-rules', DelegationRuleViewSet, basename='delegation-rule')
+router.register('shareholder-compacts', ShareholderCompactViewSet, basename='shareholder-compact')
+router.register('compact-targets', CompactTargetViewSet, basename='compact-target')
+router.register('compact-actuals', CompactActualViewSet, basename='compact-actual')
+router.register('funding-tranches', FundingTrancheViewSet, basename='funding-tranche')
+router.register('iufw-incidents', IUFWIncidentViewSet, basename='iufw-incident')
+router.register('iufw-investigations', IUFWInvestigationViewSet, basename='iufw-investigation')
+router.register('iufw-recoveries', IUFWRecoveryViewSet, basename='iufw-recovery')
 
 urlpatterns = router.urls

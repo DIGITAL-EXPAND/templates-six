@@ -1,6 +1,12 @@
 import { ApiError, apiRequest, apiUrl } from './client';
 import type {
   AuthTokens,
+  TenantEntityConfig,
+  DelegationMatrix,
+  DelegationRule,
+  ShareholderCompact,
+  CompactTarget,
+  IUFWIncident,
   ArtistDocumentItem,
   TaskCommentItem,
   CreateTaskCommentPayload,
@@ -1524,6 +1530,59 @@ export async function closeOutShow(token: string, showId: string): Promise<{ sho
   });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to close out show' });
   return r.json();
+}
+
+// Phase 7 endpoints
+export async function fetchDelegationMatrices(token: string) {
+  const res = await fetch('/api/v1/governance/delegation-matrices/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: DelegationMatrix[] }>;
+}
+
+export async function fetchDelegationMatrixRules(token: string, matrixId: string) {
+  const res = await fetch(`/api/v1/governance/delegation-matrices/${matrixId}/rules/`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<DelegationRule[]>;
+}
+
+export async function fetchShareholderCompacts(token: string) {
+  const res = await fetch('/api/v1/governance/shareholder-compacts/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ShareholderCompact[] }>;
+}
+
+export async function fetchCompactProgress(token: string, compactId: string) {
+  const res = await fetch(`/api/v1/governance/shareholder-compacts/${compactId}/progress/`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ targets: (CompactTarget & { achievement_pct: number })[] }>;
+}
+
+export async function fetchIUFWIncidents(token: string) {
+  const res = await fetch('/api/v1/governance/iufw-incidents/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: IUFWIncident[] }>;
+}
+
+export async function fetchIUFWRegister(token: string) {
+  const res = await fetch('/api/v1/governance/iufw-incidents/register/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json();
+}
+
+export async function createIUFWIncident(token: string, payload: Partial<IUFWIncident>) {
+  const res = await fetch('/api/v1/governance/iufw-incidents/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<IUFWIncident>;
+}
+
+export async function fetchEntityConfig(token: string) {
+  const res = await fetch('/api/v1/organisations/entity-config/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: TenantEntityConfig[] }>;
 }
 
 export async function createHospitalityRequest(token: string, payload: {

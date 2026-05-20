@@ -1840,6 +1840,106 @@ export type ShowItem = {
   created_at: string;
 };
 
+// Phase 7 types
+export interface TenantEntityConfig {
+  id: string;
+  entity_type: 'pfma_schedule_3a' | 'mfma_municipal' | 'section_21_npo' | 'private_company';
+  executive_authority: string;
+  accounting_authority: string;
+  auditor_general_client: boolean;
+  pfma_applicable: boolean;
+  mfma_applicable: boolean;
+  grap_reporting: boolean;
+  treasury_reporting_required: boolean;
+  shareholder_compact_required: boolean;
+  delegation_framework_required: boolean;
+  financial_year_end: string;
+}
+
+export interface DelegationRule {
+  id: string;
+  category: string;
+  action_description: string;
+  delegated_to: string;
+  threshold_amount: string | null;
+  requires_countersign: boolean;
+  countersign_level: string;
+  requires_board_approval: boolean;
+  notes: string;
+}
+
+export interface DelegationMatrix {
+  id: string;
+  name: string;
+  version: number;
+  effective_date: string;
+  is_active: boolean;
+  rules?: DelegationRule[];
+}
+
+export interface CompactActual {
+  id: string;
+  quarter: number;
+  actual_value: string;
+  variance_notes: string;
+  reported_at: string;
+  evidence_reference: string;
+}
+
+export interface CompactTarget {
+  id: string;
+  category: string;
+  indicator_name: string;
+  baseline_value: string;
+  target_value: string;
+  unit: string;
+  weight_percent: string;
+  q1_target: string;
+  q2_target: string;
+  q3_target: string;
+  q4_target: string;
+  actuals?: CompactActual[];
+}
+
+export interface FundingTranche {
+  id: string;
+  tranche_number: number;
+  description: string;
+  amount: string;
+  due_date: string;
+  received_date: string | null;
+  is_received: boolean;
+  notes: string;
+}
+
+export interface ShareholderCompact {
+  id: string;
+  financial_year: string;
+  status: string;
+  executive_authority: string;
+  signed_date: string | null;
+  review_date: string | null;
+  total_grant_allocation: string;
+  targets?: CompactTarget[];
+  tranches?: FundingTranche[];
+}
+
+export interface IUFWIncident {
+  id: string;
+  reference_number: string;
+  iufw_type: 'irregular' | 'unauthorised' | 'fruitless' | 'wasteful';
+  status: string;
+  financial_year: string;
+  description: string;
+  amount: string;
+  discovered_date: string;
+  responsible_description: string;
+  root_cause: string;
+  reported_to_board: boolean;
+  reported_to_ag: boolean;
+  agsa_reference: string;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

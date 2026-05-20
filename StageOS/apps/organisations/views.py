@@ -1,7 +1,8 @@
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Organisation
-from .serializers import OrganisationSerializer
+from common.views import TenantScopedMixin
+from .models import Organisation, TenantEntityConfig
+from .serializers import OrganisationSerializer, TenantEntityConfigSerializer
 
 
 class OrganisationListView(generics.ListAPIView):
@@ -12,3 +13,9 @@ class OrganisationListView(generics.ListAPIView):
         if not self.request.user.organisation_id:
             return Organisation.objects.none()
         return Organisation.objects.filter(id=self.request.user.organisation_id)
+
+
+class TenantEntityConfigViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = TenantEntityConfig.objects.all()
+    serializer_class = TenantEntityConfigSerializer
+    ordering = ['created_at']

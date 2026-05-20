@@ -3,6 +3,9 @@ from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_no
 from .models import (
     KPI, KPIEvidence, Risk, CorrectiveAction, ExecutiveAction,
     Budget, BudgetLine, BoardMeeting, BoardResolution,
+    DelegationMatrix, DelegationRule,
+    ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
+    IUFWIncident, IUFWInvestigation, IUFWRecovery,
 )
 
 
@@ -237,3 +240,146 @@ class BoardMeetingSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Minutes document')
+
+
+# ── Delegation Framework ──────────────────────────────────────────────────────
+
+class DelegationRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DelegationRule
+        fields = [
+            'id', 'matrix', 'category', 'action_description', 'delegated_to',
+            'threshold_amount', 'requires_countersign', 'countersign_level',
+            'requires_board_approval', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_matrix(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Delegation matrix')
+
+
+class DelegationMatrixSerializer(serializers.ModelSerializer):
+    rules = DelegationRuleSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DelegationMatrix
+        fields = [
+            'id', 'name', 'version', 'effective_date', 'is_active',
+            'approved_by', 'notes', 'created_at', 'rules',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_approved_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Approved by')
+
+
+# ── Shareholder Compact ───────────────────────────────────────────────────────
+
+class CompactActualSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompactActual
+        fields = [
+            'id', 'target', 'quarter', 'actual_value', 'variance_notes',
+            'reported_by', 'reported_at', 'evidence_reference',
+        ]
+        read_only_fields = ['id', 'reported_by', 'reported_at']
+
+    def validate_target(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Compact target')
+
+
+class CompactTargetSerializer(serializers.ModelSerializer):
+    actuals = CompactActualSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CompactTarget
+        fields = [
+            'id', 'compact', 'category', 'indicator_name', 'baseline_value',
+            'target_value', 'unit', 'weight_percent',
+            'q1_target', 'q2_target', 'q3_target', 'q4_target', 'actuals',
+        ]
+        read_only_fields = ['id']
+
+    def validate_compact(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Shareholder compact')
+
+
+class FundingTrancheSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FundingTranche
+        fields = [
+            'id', 'compact', 'tranche_number', 'description', 'amount',
+            'due_date', 'received_date', 'is_received', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_compact(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Shareholder compact')
+
+
+class ShareholderCompactSerializer(serializers.ModelSerializer):
+    targets = CompactTargetSerializer(many=True, read_only=True)
+    tranches = FundingTrancheSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ShareholderCompact
+        fields = [
+            'id', 'financial_year', 'status', 'executive_authority',
+            'signed_date', 'review_date', 'total_grant_allocation', 'notes',
+            'created_at', 'updated_at', 'targets', 'tranches',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# ── IUFW ─────────────────────────────────────────────────────────────────────
+
+class IUFWIncidentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IUFWIncident
+        fields = [
+            'id', 'reference_number', 'iufw_type', 'status', 'financial_year',
+            'description', 'amount', 'discovered_date',
+            'responsible_person', 'responsible_description', 'root_cause',
+            'reported_to_board', 'reported_to_ag', 'agsa_reference',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'reference_number', 'created_at', 'updated_at']
+
+    def validate_responsible_person(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Responsible person')
+
+
+class IUFWInvestigationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IUFWInvestigation
+        fields = [
+            'id', 'incident', 'investigator', 'investigator_description',
+            'commenced_date', 'completed_date', 'findings', 'recommendation',
+            'disciplinary_recommended', 'criminal_referral_recommended', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_incident(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'IUFW incident')
+
+    def validate_investigator(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Investigator')
+
+
+class IUFWRecoverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IUFWRecovery
+        fields = [
+            'id', 'incident', 'amount_recovered', 'recovery_date',
+            'recovery_method', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_incident(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'IUFW incident')

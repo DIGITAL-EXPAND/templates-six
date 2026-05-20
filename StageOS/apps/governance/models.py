@@ -386,3 +386,199 @@ class BoardResolution(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.resolution_number}: {self.title} [{self.status}]'
+
+
+# ── Delegation Framework ──────────────────────────────────────────────────────
+
+class DelegationLevel(models.TextChoices):
+    BOARD = 'board', 'Board'
+    CEO = 'ceo', 'CEO / Executive Director'
+    CFO = 'cfo', 'CFO'
+    GM = 'gm', 'General Manager'
+    DEPARTMENT_MANAGER = 'department_manager', 'Department Manager'
+    STAFF = 'staff', 'Staff Member'
+
+
+class DelegationCategory(models.TextChoices):
+    PROCUREMENT = 'procurement', 'Procurement'
+    CONTRACTS = 'contracts', 'Contracts'
+    HUMAN_RESOURCES = 'human_resources', 'Human Resources'
+    FINANCE = 'finance', 'Finance'
+    OPERATIONS = 'operations', 'Operations'
+    LEGAL = 'legal', 'Legal'
+
+
+class DelegationMatrix(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    version = models.PositiveIntegerField(default=1)
+    effective_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    approved_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_delegation_matrices')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class DelegationRule(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    matrix = models.ForeignKey(DelegationMatrix, on_delete=models.CASCADE, related_name='rules')
+    category = models.CharField(max_length=30, choices=DelegationCategory.choices)
+    action_description = models.CharField(max_length=255)
+    delegated_to = models.CharField(max_length=30, choices=DelegationLevel.choices)
+    threshold_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='ZAR threshold — null means no financial limit')
+    requires_countersign = models.BooleanField(default=False)
+    countersign_level = models.CharField(max_length=30, choices=DelegationLevel.choices, blank=True)
+    requires_board_approval = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['category', 'threshold_amount']
+
+
+# ── Shareholder Compact ───────────────────────────────────────────────────────
+
+class CompactStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    SUBMITTED = 'submitted', 'Submitted to Shareholder'
+    AGREED = 'agreed', 'Agreed & Signed'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    UNDER_REVIEW = 'under_review', 'Under Review'
+    CLOSED = 'closed', 'Closed / Evaluated'
+
+
+class TargetCategory(models.TextChoices):
+    FINANCIAL = 'financial', 'Financial Performance'
+    ARTISTIC = 'artistic', 'Artistic Mandate'
+    GOVERNANCE = 'governance', 'Governance & Compliance'
+    SOCIAL = 'social', 'Social Impact'
+    OPERATIONAL = 'operational', 'Operational Efficiency'
+
+
+class ShareholderCompact(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    financial_year = models.CharField(max_length=9, help_text='e.g. 2025/2026')
+    status = models.CharField(max_length=20, choices=CompactStatus.choices, default=CompactStatus.DRAFT)
+    executive_authority = models.CharField(max_length=255, blank=True)
+    signed_date = models.DateField(null=True, blank=True)
+    review_date = models.DateField(null=True, blank=True)
+    total_grant_allocation = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('organisation', 'financial_year')]
+
+
+class CompactTarget(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    compact = models.ForeignKey(ShareholderCompact, on_delete=models.CASCADE, related_name='targets')
+    category = models.CharField(max_length=20, choices=TargetCategory.choices)
+    indicator_name = models.CharField(max_length=255)
+    baseline_value = models.CharField(max_length=100, blank=True)
+    target_value = models.CharField(max_length=100)
+    unit = models.CharField(max_length=50, blank=True)
+    weight_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    q1_target = models.CharField(max_length=100, blank=True)
+    q2_target = models.CharField(max_length=100, blank=True)
+    q3_target = models.CharField(max_length=100, blank=True)
+    q4_target = models.CharField(max_length=100, blank=True)
+
+
+class CompactActual(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    target = models.ForeignKey(CompactTarget, on_delete=models.CASCADE, related_name='actuals')
+    quarter = models.PositiveSmallIntegerField(choices=[(1, 'Q1'), (2, 'Q2'), (3, 'Q3'), (4, 'Q4')])
+    actual_value = models.CharField(max_length=100)
+    variance_notes = models.TextField(blank=True)
+    reported_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='compact_actuals')
+    reported_at = models.DateTimeField(auto_now_add=True)
+    evidence_reference = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        unique_together = [('organisation', 'target', 'quarter')]
+
+
+class FundingTranche(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    compact = models.ForeignKey(ShareholderCompact, on_delete=models.CASCADE, related_name='tranches')
+    tranche_number = models.PositiveSmallIntegerField()
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    due_date = models.DateField()
+    received_date = models.DateField(null=True, blank=True)
+    is_received = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['tranche_number']
+
+
+# ── IUFW (Irregular, Unauthorised, Fruitless & Wasteful Expenditure) ──────────
+
+class IUFWType(models.TextChoices):
+    IRREGULAR = 'irregular', 'Irregular Expenditure'
+    UNAUTHORISED = 'unauthorised', 'Unauthorised Expenditure'
+    FRUITLESS = 'fruitless', 'Fruitless & Wasteful Expenditure'
+    WASTEFUL = 'wasteful', 'Wasteful Expenditure'
+
+
+class IUFWStatus(models.TextChoices):
+    IDENTIFIED = 'identified', 'Identified'
+    UNDER_INVESTIGATION = 'under_investigation', 'Under Investigation'
+    REFERRED_DISCIPLINE = 'referred_discipline', 'Referred for Disciplinary Action'
+    REFERRED_CRIMINAL = 'referred_criminal', 'Referred to Law Enforcement'
+    CONDONED = 'condoned', 'Condoned by Authority'
+    RECOVERED = 'recovered', 'Recovered'
+    WRITTEN_OFF = 'written_off', 'Written Off (Board Approved)'
+    CLOSED = 'closed', 'Closed'
+
+
+class IUFWIncident(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reference_number = models.CharField(max_length=50, blank=True)
+    iufw_type = models.CharField(max_length=20, choices=IUFWType.choices)
+    status = models.CharField(max_length=25, choices=IUFWStatus.choices, default=IUFWStatus.IDENTIFIED)
+    financial_year = models.CharField(max_length=9)
+    description = models.TextField()
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    discovered_date = models.DateField()
+    responsible_person = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='iufw_incidents')
+    responsible_description = models.CharField(max_length=255, blank=True)
+    root_cause = models.TextField(blank=True)
+    reported_to_board = models.BooleanField(default=False)
+    reported_to_ag = models.BooleanField(default=False)
+    agsa_reference = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            year = self.financial_year.replace('/', '-') if self.financial_year else 'UNK'
+            count = IUFWIncident.objects.filter(organisation=self.organisation).count() + 1
+            self.reference_number = f'IUFW-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+
+class IUFWInvestigation(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.OneToOneField(IUFWIncident, on_delete=models.CASCADE, related_name='investigation')
+    investigator = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='iufw_investigations')
+    investigator_description = models.CharField(max_length=255, blank=True)
+    commenced_date = models.DateField()
+    completed_date = models.DateField(null=True, blank=True)
+    findings = models.TextField(blank=True)
+    recommendation = models.TextField(blank=True)
+    disciplinary_recommended = models.BooleanField(default=False)
+    criminal_referral_recommended = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class IUFWRecovery(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(IUFWIncident, on_delete=models.CASCADE, related_name='recoveries')
+    amount_recovered = models.DecimalField(max_digits=14, decimal_places=2)
+    recovery_date = models.DateField()
+    recovery_method = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

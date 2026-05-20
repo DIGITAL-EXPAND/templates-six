@@ -106,6 +106,7 @@ const allItems = {
   seasonAnalytics:{ label: 'Season Analytics', href: '/programming/seasons',       icon: BarChart3 },
   shows:          { label: 'Shows',             href: '/programming/shows',         icon: CalendarClock },
   venueManagement:{ label: 'Venue Management',  href: '/settings/venues',           icon: Landmark },
+  workflows:      { label: 'Workflows',          href: '/workspaces/workflows',      icon: Activity },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -134,6 +135,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       {
         label: 'Planning',
         items: [
+          allItems.workflows,
           allItems.programming,
           allItems.shows,
           allItems.seasonAnalytics,
@@ -172,6 +174,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.dashboard,
           allItems.calendar,
           allItems.workspaces,
+          allItems.workflows,
           allItems.shows,
           allItems.seasonAnalytics,
           allItems.governance,
@@ -234,7 +237,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.calendar,
       allItems.workspaces,
       departmentItem(kind),
-      ...(kind === 'programming' ? [allItems.shows, allItems.seasonAnalytics] : []),
+      ...(kind === 'programming' ? [allItems.shows, allItems.seasonAnalytics, allItems.workflows] : []),
       allItems.tasks,
       allItems.documents,
       allItems.reports,

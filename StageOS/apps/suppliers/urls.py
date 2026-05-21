@@ -2,6 +2,7 @@ from rest_framework.routers import DefaultRouter, SimpleRouter
 from .views import (
     SupplierViewSet, SupplierDocumentViewSet, SupplierEngagementViewSet, PaymentPackViewSet,
     PurchaseRequisitionViewSet, PurchaseOrderViewSet, SupplierCSDVerificationViewSet,
+    ThreeQuoteRequirementViewSet, SupplierQuoteViewSet,
 )
 
 # Sub-resource routes must come BEFORE the empty-prefix Supplier routes
@@ -14,6 +15,8 @@ sub_router.register('payment-packs', PaymentPackViewSet, basename='payment-pack'
 sub_router.register('requisitions', PurchaseRequisitionViewSet, basename='purchase-requisition')
 sub_router.register('purchase-orders', PurchaseOrderViewSet, basename='purchase-order')
 sub_router.register('csd-verifications', SupplierCSDVerificationViewSet, basename='csd-verification')
+sub_router.register('rfq', ThreeQuoteRequirementViewSet, basename='rfq')
+sub_router.register('rfq-quotes', SupplierQuoteViewSet, basename='rfq-quote')
 
 main_router = DefaultRouter()
 main_router.register('', SupplierViewSet, basename='supplier')

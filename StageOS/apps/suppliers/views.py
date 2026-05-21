@@ -8,12 +8,13 @@ from common.views import TenantScopedMixin
 from common.permissions import (
     CanAccessSupplierData, CanAccessFinance, IsTenantMember, UserRoles, user_type,
 )
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification, ThreeQuoteRequirement, SupplierQuote
 from .serializers import (
     SupplierSerializer, SupplierDocumentSerializer,
     SupplierEngagementSerializer, PaymentPackSerializer,
     PurchaseRequisitionSerializer, PurchaseOrderSerializer,
     SupplierCSDVerificationSerializer,
+    ThreeQuoteRequirementSerializer, SupplierQuoteSerializer,
 )
 from .services import (
     verify_supplier, send_payment_to_erp, upload_supplier_document,
@@ -186,3 +187,73 @@ class SupplierCSDVerificationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             SupplierCSDVerificationSerializer(verification, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+# ── Three-Quote Requirement ───────────────────────────────────────────────────
+
+class ThreeQuoteRequirementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ThreeQuoteRequirement.objects.select_related(
+        'department', 'requested_by', 'awarded_to_supplier', 'waiver_approved_by',
+    ).prefetch_related('quotes')
+    serializer_class = ThreeQuoteRequirementSerializer
+    filterset_fields = ['status', 'department', 'requested_by']
+    search_fields = ['reference_number', 'description', 'budget_line']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'], url_path='add-quote')
+    def add_quote(self, request, pk=None):
+        requirement = self.get_object()
+        data = request.data.copy()
+        data['requirement'] = str(requirement.id)
+        serializer = SupplierQuoteSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        quote = serializer.save(organisation_id=request.user.organisation_id)
+        return Response(
+            SupplierQuoteSerializer(quote, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['post'])
+    def award(self, request, pk=None):
+        requirement = self.get_object()
+        supplier_id = request.data.get('supplier_id')
+        amount = request.data.get('amount')
+
+        if not supplier_id:
+            return Response(
+                {'supplier_id': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if amount is None:
+            return Response(
+                {'amount': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            supplier = Supplier.objects.get(id=supplier_id, organisation=request.user.organisation)
+        except Supplier.DoesNotExist:
+            return Response(
+                {'supplier_id': 'Supplier not found in your organisation.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        requirement.awarded_to_supplier = supplier
+        requirement.awarded_amount = amount
+        requirement.status = 'awarded'
+        requirement.save(update_fields=['awarded_to_supplier', 'awarded_amount', 'status'])
+        return Response(ThreeQuoteRequirementSerializer(requirement, context={'request': request}).data)
+
+
+class SupplierQuoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = SupplierQuote.objects.select_related('requirement', 'supplier')
+    serializer_class = SupplierQuoteSerializer
+    filterset_fields = ['requirement', 'supplier', 'is_preferred', 'disqualified']
+    search_fields = ['supplier_name', 'quote_reference', 'notes']
+    ordering = ['quote_amount']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

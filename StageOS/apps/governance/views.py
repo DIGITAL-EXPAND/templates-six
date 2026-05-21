@@ -15,6 +15,7 @@ from .models import (
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
     AGAuditRequest, AGAuditEvidence,
+    ConflictOfInterest, PerformanceReport,
 )
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
@@ -27,6 +28,7 @@ from .serializers import (
     ShareholderCompactSerializer, CompactTargetSerializer, CompactActualSerializer, FundingTrancheSerializer,
     IUFWIncidentSerializer, IUFWInvestigationSerializer, IUFWRecoverySerializer,
     AGAuditRequestSerializer, AGAuditEvidenceSerializer,
+    ConflictOfInterestSerializer, PerformanceReportSerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -490,3 +492,92 @@ class AGAuditEvidenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Conflict of Interest ──────────────────────────────────────────────────────
+
+class ConflictOfInterestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ConflictOfInterest.objects.select_related('declarant', 'witnessed_by')
+    serializer_class = ConflictOfInterestSerializer
+    filterset_fields = ['status', 'category', 'financial_year', 'declarant', 'is_annual_declaration']
+    search_fields = ['description', 'entity_name', 'matter_reference']
+    ordering = ['-declaration_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=False, methods=['get'])
+    def register(self, request):
+        """All declarations for current FY grouped by declarant, with annual declaration status."""
+        today = timezone.now().date()
+        if today.month >= 4:
+            fy = f'{today.year}/{today.year + 1}'
+        else:
+            fy = f'{today.year - 1}/{today.year}'
+
+        financial_year = request.query_params.get('financial_year', fy)
+        org_id = request.user.organisation_id
+
+        declarations = ConflictOfInterest.objects.filter(
+            organisation_id=org_id,
+            financial_year=financial_year,
+        ).select_related('declarant', 'witnessed_by').order_by('declarant__id', '-declaration_date')
+
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        annual_status = {}
+
+        for declaration in declarations:
+            declarant_id = str(declaration.declarant_id)
+            grouped[declarant_id].append(
+                ConflictOfInterestSerializer(declaration, context={'request': request}).data
+            )
+            if declaration.is_annual_declaration:
+                annual_status[declarant_id] = declaration.status
+
+        result = []
+        for declarant_id, decls in grouped.items():
+            first = decls[0]
+            result.append({
+                'declarant_id': declarant_id,
+                'declarant_name': first.get('declarant'),
+                'annual_declaration_status': annual_status.get(declarant_id, 'pending'),
+                'declarations': decls,
+                'total_declarations': len(decls),
+            })
+
+        return Response({
+            'financial_year': financial_year,
+            'declarants_count': len(result),
+            'register': result,
+        })
+
+
+# ── Performance Report ────────────────────────────────────────────────────────
+
+class PerformanceReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PerformanceReport.objects.select_related('compact', 'prepared_by', 'approved_by')
+    serializer_class = PerformanceReportSerializer
+    filterset_fields = ['compact', 'quarter', 'status']
+    search_fields = ['executive_summary', 'key_achievements', 'challenges']
+    ordering = ['compact__financial_year', 'quarter']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        report = self.get_object()
+        report.status = 'submitted'
+        report.submitted_date = timezone.now().date()
+        report.save(update_fields=['status', 'submitted_date'])
+        return Response(PerformanceReportSerializer(report, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        report = self.get_object()
+        report.status = 'approved'
+        report.approved_by = request.user
+        report.approved_date = timezone.now().date()
+        report.save(update_fields=['status', 'approved_by', 'approved_date'])
+        return Response(PerformanceReportSerializer(report, context={'request': request}).data)

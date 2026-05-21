@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from common.serializers import check_tenant_fk, ProtectedFieldsMixin, require_non_negative
-from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification
+from .models import Supplier, SupplierDocument, SupplierEngagement, PaymentPack, PurchaseRequisition, PurchaseOrder, SupplierCSDVerification, ThreeQuoteRequirement, SupplierQuote
 
 
 class SupplierSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -181,3 +181,73 @@ class SupplierCSDVerificationSerializer(serializers.ModelSerializer):
 
     def validate_supplier(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Supplier')
+
+
+# ── Three-Quote Requirement ───────────────────────────────────────────────────
+
+class SupplierQuoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplierQuote
+        fields = [
+            'id', 'requirement', 'supplier', 'supplier_name',
+            'quote_amount', 'quote_date', 'quote_reference',
+            'is_preferred', 'disqualified', 'disqualification_reason', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_requirement(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'RFQ requirement')
+
+    def validate_supplier(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Supplier')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        require_non_negative(attrs, ['quote_amount'])
+        return attrs
+
+
+class ThreeQuoteRequirementSerializer(serializers.ModelSerializer):
+    quotes = SupplierQuoteSerializer(many=True, read_only=True)
+    quotes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ThreeQuoteRequirement
+        fields = [
+            'id', 'reference_number', 'description', 'estimated_value',
+            'status', 'required_by_date', 'budget_line', 'department',
+            'requested_by', 'awarded_to_supplier', 'awarded_amount',
+            'award_motivation', 'waiver_reason', 'waiver_approved_by',
+            'notes', 'created_at', 'updated_at', 'quotes', 'quotes_count',
+        ]
+        read_only_fields = ['id', 'reference_number', 'created_at', 'updated_at']
+
+    def get_quotes_count(self, obj):
+        return obj.quotes.count()
+
+    def validate_department(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Department')
+
+    def validate_requested_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Requested by')
+
+    def validate_awarded_to_supplier(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Awarded supplier')
+
+    def validate_waiver_approved_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Waiver approved by')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        require_non_negative(attrs, ['estimated_value'])
+        return attrs

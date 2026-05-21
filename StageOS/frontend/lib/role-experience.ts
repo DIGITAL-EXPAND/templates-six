@@ -176,6 +176,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.marketing,
           allItems.technical,
           allItems.operations,
+          allItems.safety,
+          allItems.leaveManagement,
           allItems.ticketing,
           allItems.youth,
           allItems.hospitality,
@@ -184,7 +186,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -203,6 +205,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.governance,
           allItems.budgets,
           allItems.boardMeetings,
+          allItems.boardMembers,
           allItems.complianceCompact,
           allItems.iufw,
           allItems.declarations,
@@ -212,6 +215,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.audit,
           allItems.tasks,
           allItems.patrons,
+          allItems.donors,
         ],
       },
     ];

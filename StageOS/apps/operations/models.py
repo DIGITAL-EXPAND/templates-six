@@ -232,3 +232,62 @@ class StaffCall(TenantOwnedModel):
 
     def __str__(self):
         return f'{self.staff_member} as {self.get_role_display()} @ {self.call_time}'
+
+
+# ── Liquor Licence ────────────────────────────────────────────────────────────
+
+class LiquorLicenceStatus(models.TextChoices):
+    NOT_APPLICABLE = 'not_applicable', 'Not Applicable'
+    REQUIRED = 'required', 'Required — Not Applied'
+    APPLIED = 'applied', 'Application Submitted'
+    APPROVED = 'approved', 'Approved'
+    ACTIVE = 'active', 'Active / Paid'
+    RENEWAL_DUE = 'renewal_due', 'Renewal Due'
+    EXPIRED = 'expired', 'Expired'
+    SUSPENDED = 'suspended', 'Suspended'
+
+class LiquorLicence(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    venue = models.ForeignKey('structure.Venue', on_delete=models.PROTECT, related_name='liquor_licences')
+    licence_number = models.CharField(max_length=100, blank=True)
+    licence_holder = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=LiquorLicenceStatus.choices, default=LiquorLicenceStatus.REQUIRED)
+    issue_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    annual_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    last_paid_date = models.DateField(null=True, blank=True)
+    issuing_authority = models.CharField(max_length=255, blank=True)
+    conditions = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+# ── Safety Compliance ─────────────────────────────────────────────────────────
+
+class SafetyComplianceType(models.TextChoices):
+    FIRE_CERTIFICATE = 'fire_certificate', 'Fire Safety Certificate (CoC)'
+    EVACUATION_PLAN = 'evacuation_plan', 'Evacuation Plan'
+    CROWD_MANAGEMENT = 'crowd_management', 'Crowd Management Plan'
+    FIRST_AID = 'first_aid', 'First Aid Compliance'
+    OHS_INSPECTION = 'ohs_inspection', 'OHS Inspection'
+    PUBLIC_LIABILITY = 'public_liability', 'Public Liability Insurance'
+    STRUCTURAL_CERT = 'structural_cert', 'Structural Certificate'
+
+class SafetyComplianceRecord(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    compliance_type = models.CharField(max_length=25, choices=SafetyComplianceType.choices)
+    venue = models.ForeignKey('structure.Venue', on_delete=models.PROTECT, null=True, blank=True, related_name='safety_records')
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.SET_NULL, null=True, blank=True, related_name='safety_records')
+    is_compliant = models.BooleanField(default=False)
+    certificate_number = models.CharField(max_length=100, blank=True)
+    issue_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    issuing_body = models.CharField(max_length=255, blank=True)
+    responsible_person = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='safety_records')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['compliance_type', 'expiry_date']

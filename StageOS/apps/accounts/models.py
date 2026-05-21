@@ -73,3 +73,44 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f'{self.first_name} {self.last_name}'.strip() or self.email
 
 from .popia_models import DataConsent  # noqa: F401 - ensures Django tracks this model
+
+
+# ── Leave Requests ────────────────────────────────────────────────────────────
+
+from common.models import TenantOwnedModel  # noqa: E402 - already imported in popia_models
+
+class LeaveType(models.TextChoices):
+    ANNUAL = 'annual', 'Annual Leave'
+    SICK = 'sick', 'Sick Leave'
+    FAMILY = 'family', 'Family Responsibility Leave'
+    MATERNITY = 'maternity', 'Maternity Leave'
+    PATERNITY = 'paternity', 'Paternity Leave'
+    STUDY = 'study', 'Study Leave'
+    UNPAID = 'unpaid', 'Unpaid Leave'
+    OTHER = 'other', 'Other'
+
+class LeaveStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending Approval'
+    APPROVED = 'approved', 'Approved'
+    DECLINED = 'declined', 'Declined'
+    CANCELLED = 'cancelled', 'Cancelled'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    COMPLETED = 'completed', 'Completed'
+
+class LeaveRequest(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey('User', on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type = models.CharField(max_length=20, choices=LeaveType.choices)
+    status = models.CharField(max_length=15, choices=LeaveStatus.choices, default=LeaveStatus.PENDING)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    days_requested = models.DecimalField(max_digits=5, decimal_places=1)
+    reason = models.TextField(blank=True)
+    approved_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leave_requests')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    declined_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date']

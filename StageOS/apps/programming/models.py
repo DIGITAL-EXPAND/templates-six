@@ -442,3 +442,35 @@ class ProductionLicence(TenantOwnedModel):
     class Meta:
         unique_together = [('organisation', 'operating_context', 'licensing_body')]
         ordering = ['operating_context', 'licensing_body']
+
+
+# ── Production Journal ────────────────────────────────────────────────────────
+
+class JournalEntryType(models.TextChoices):
+    GENERAL = 'general', 'General Note'
+    INCIDENT = 'incident', 'Incident'
+    DECISION = 'decision', 'Decision Made'
+    CHANGE = 'change', 'Change / Deviation'
+    ACHIEVEMENT = 'achievement', 'Achievement'
+    CONCERN = 'concern', 'Concern Raised'
+    ACTION = 'action', 'Action Required'
+
+class ProductionJournalEntry(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey(
+        'contexts.OperatingContext', on_delete=models.CASCADE, related_name='journal_entries',
+    )
+    entry_date = models.DateField()
+    entry_type = models.CharField(max_length=20, choices=JournalEntryType.choices, default=JournalEntryType.GENERAL)
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    author = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_entries')
+    is_confidential = models.BooleanField(default=False)
+    requires_follow_up = models.BooleanField(default=False)
+    follow_up_by = models.DateField(null=True, blank=True)
+    follow_up_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-entry_date', '-created_at']

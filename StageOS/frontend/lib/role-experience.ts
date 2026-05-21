@@ -119,6 +119,11 @@ const allItems = {
   rfq:              { label: 'RFQ Register',          href: '/suppliers/rfq',           icon: ShoppingCart },
   perfReports:      { label: 'Performance Reports',  href: '/governance/performance',  icon: BarChart3 },
   entityConfig:     { label: 'Entity Config',         href: '/settings/entity',         icon: Settings },
+  journal:          { label: 'Production Journal',     href: '/programming/journal',      icon: FileText },
+  leaveManagement:  { label: 'Leave',                  href: '/hr/leave',                 icon: CalendarClock },
+  safety:           { label: 'Safety & Compliance',    href: '/operations/safety',        icon: ClipboardCheck },
+  donors:           { label: 'Donors & Sponsors',      href: '/patrons/donors',           icon: Handshake },
+  boardMembers:     { label: 'Board Members',          href: '/governance/board-members', icon: Users2 },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -150,6 +155,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.workflows,
           allItems.programming,
           allItems.shows,
+          allItems.journal,
           allItems.seasonAnalytics,
           allItems.tasks,
           allItems.documents,
@@ -161,6 +167,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.licences,
           allItems.rentals,
           allItems.patrons,
+          allItems.donors,
         ],
       },
       {

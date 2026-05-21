@@ -1,6 +1,10 @@
 import { ApiError, apiRequest, apiUrl } from './client';
 import type {
   AuthTokens,
+  ConflictOfInterest,
+  PerformanceReport,
+  SupplierQuote,
+  ThreeQuoteRequirement,
   TenantEntityConfig,
   DelegationMatrix,
   DelegationRule,
@@ -1649,4 +1653,62 @@ export async function fetchCSDVerifications(token: string) {
   const res = await fetch('/api/v1/suppliers/csd-verifications/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: SupplierCSDVerification[] }>;
+}
+
+// Phase 9 endpoints
+export async function fetchConflictDeclarations(token: string) {
+  const res = await fetch('/api/v1/governance/conflict-of-interest/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ConflictOfInterest[] }>;
+}
+
+export async function createConflictDeclaration(token: string, payload: Partial<ConflictOfInterest>) {
+  const res = await fetch('/api/v1/governance/conflict-of-interest/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<ConflictOfInterest>;
+}
+
+export async function fetchRFQList(token: string) {
+  const res = await fetch('/api/v1/suppliers/rfq/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ThreeQuoteRequirement[] }>;
+}
+
+export async function createRFQ(token: string, payload: Partial<ThreeQuoteRequirement>) {
+  const res = await fetch('/api/v1/suppliers/rfq/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<ThreeQuoteRequirement>;
+}
+
+export async function addQuoteToRFQ(token: string, rfqId: string, payload: Partial<SupplierQuote>) {
+  const res = await fetch(`/api/v1/suppliers/rfq/${rfqId}/add_quote/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json();
+}
+
+export async function fetchPerformanceReports(token: string) {
+  const res = await fetch('/api/v1/governance/performance-reports/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: PerformanceReport[] }>;
+}
+
+export async function submitPerformanceReport(token: string, reportId: string) {
+  const res = await fetch(`/api/v1/governance/performance-reports/${reportId}/submit/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('submit failed');
+  return res.json() as Promise<PerformanceReport>;
 }

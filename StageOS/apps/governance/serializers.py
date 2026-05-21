@@ -7,6 +7,7 @@ from .models import (
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
     AGAuditRequest, AGAuditEvidence,
+    ConflictOfInterest, PerformanceReport,
 )
 
 
@@ -424,3 +425,52 @@ class AGAuditRequestSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Audit coordinator')
+
+
+# ── Conflict of Interest ──────────────────────────────────────────────────────
+
+class ConflictOfInterestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConflictOfInterest
+        fields = [
+            'id', 'declarant', 'declaration_date', 'financial_year',
+            'status', 'category', 'description', 'entity_name',
+            'matter_reference', 'recusal_details', 'is_annual_declaration',
+            'witnessed_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_declarant(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Declarant')
+
+    def validate_witnessed_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Witnessed by')
+
+
+# ── Performance Report ────────────────────────────────────────────────────────
+
+class PerformanceReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PerformanceReport
+        fields = [
+            'id', 'compact', 'quarter', 'status',
+            'reporting_period_start', 'reporting_period_end',
+            'executive_summary', 'key_achievements', 'challenges',
+            'corrective_actions', 'financial_narrative',
+            'prepared_by', 'approved_by', 'submitted_date', 'approved_date',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'status', 'approved_by', 'submitted_date', 'approved_date',
+            'created_at', 'updated_at',
+        ]
+
+    def validate_compact(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Shareholder compact')
+
+    def validate_prepared_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Prepared by')

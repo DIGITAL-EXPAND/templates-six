@@ -2032,6 +2032,61 @@ export interface SupplierCSDVerification {
   blacklist_reason: string;
 }
 
+// Phase 9 types
+export interface ConflictOfInterest {
+  id: string;
+  declarant: string;
+  declarant_name?: string;
+  declaration_date: string;
+  financial_year: string;
+  status: 'declared_none' | 'declared_conflict' | 'recused' | 'pending' | 'overdue';
+  category: string;
+  description: string;
+  entity_name: string;
+  matter_reference: string;
+  recusal_details: string;
+  is_annual_declaration: boolean;
+}
+
+export interface SupplierQuote {
+  id: string;
+  supplier_name: string;
+  quote_amount: string;
+  quote_date: string;
+  quote_reference: string;
+  is_preferred: boolean;
+  disqualified: boolean;
+}
+
+export interface ThreeQuoteRequirement {
+  id: string;
+  reference_number: string;
+  description: string;
+  estimated_value: string;
+  status: string;
+  required_by_date: string | null;
+  budget_line: string;
+  awarded_amount: string | null;
+  award_motivation: string;
+  quotes_count: number;
+  quotes?: SupplierQuote[];
+}
+
+export interface PerformanceReport {
+  id: string;
+  compact: string;
+  quarter: number;
+  status: string;
+  reporting_period_start: string;
+  reporting_period_end: string;
+  executive_summary: string;
+  key_achievements: string;
+  challenges: string;
+  corrective_actions: string;
+  submitted_date: string | null;
+  approved_date: string | null;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

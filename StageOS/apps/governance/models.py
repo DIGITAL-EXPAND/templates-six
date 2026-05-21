@@ -646,3 +646,76 @@ class AGAuditEvidence(TenantOwnedModel):
     ag_query_ref = models.CharField(max_length=100, blank=True, help_text='AG query/finding reference number')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ── Conflict of Interest ──────────────────────────────────────────────────────
+
+class DeclarationStatus(models.TextChoices):
+    DECLARED_NONE = 'declared_none', 'Declared — No Conflict'
+    DECLARED_CONFLICT = 'declared_conflict', 'Declared — Conflict Exists'
+    RECUSED = 'recused', 'Recused from Matter'
+    PENDING = 'pending', 'Declaration Pending'
+    OVERDUE = 'overdue', 'Declaration Overdue'
+
+class ConflictCategory(models.TextChoices):
+    FINANCIAL = 'financial', 'Financial Interest'
+    FAMILY = 'family', 'Family / Personal Relationship'
+    DIRECTORSHIP = 'directorship', 'Directorship / Trusteeship'
+    EMPLOYMENT = 'employment', 'Outside Employment'
+    GIFT = 'gift', 'Gift / Benefit Received'
+    TENDER = 'tender', 'Tender / Procurement Related'
+    OTHER = 'other', 'Other'
+
+class ConflictOfInterest(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    declarant = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='conflict_declarations')
+    declaration_date = models.DateField()
+    financial_year = models.CharField(max_length=9)
+    status = models.CharField(max_length=20, choices=DeclarationStatus.choices, default=DeclarationStatus.PENDING)
+    category = models.CharField(max_length=20, choices=ConflictCategory.choices, blank=True)
+    description = models.TextField(blank=True, help_text='Nature of the conflict or interest')
+    entity_name = models.CharField(max_length=255, blank=True, help_text='Name of entity/person involved')
+    matter_reference = models.CharField(max_length=255, blank=True, help_text='Specific matter, contract, or tender reference')
+    recusal_details = models.TextField(blank=True)
+    is_annual_declaration = models.BooleanField(default=False)
+    witnessed_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='witnessed_declarations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-declaration_date']
+        indexes = [models.Index(fields=['organisation', 'financial_year'])]
+
+
+# ── Performance Report ────────────────────────────────────────────────────────
+
+class PerformanceReportStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    SUBMITTED = 'submitted', 'Submitted for Review'
+    REVIEWED = 'reviewed', 'Reviewed by Executive'
+    APPROVED = 'approved', 'Approved by Board'
+    PUBLISHED = 'published', 'Published / Shared with Shareholder'
+
+class PerformanceReport(TenantOwnedModel):
+    """Quarterly performance information report against Shareholder Compact."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    compact = models.ForeignKey(ShareholderCompact, on_delete=models.CASCADE, related_name='performance_reports')
+    quarter = models.PositiveSmallIntegerField(choices=[(1,'Q1'),(2,'Q2'),(3,'Q3'),(4,'Q4')])
+    status = models.CharField(max_length=15, choices=PerformanceReportStatus.choices, default=PerformanceReportStatus.DRAFT)
+    reporting_period_start = models.DateField()
+    reporting_period_end = models.DateField()
+    executive_summary = models.TextField(blank=True)
+    key_achievements = models.TextField(blank=True)
+    challenges = models.TextField(blank=True)
+    corrective_actions = models.TextField(blank=True)
+    financial_narrative = models.TextField(blank=True)
+    prepared_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='prepared_performance_reports')
+    approved_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_performance_reports')
+    submitted_date = models.DateField(null=True, blank=True)
+    approved_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('organisation', 'compact', 'quarter')]
+        ordering = ['compact__financial_year', 'quarter']

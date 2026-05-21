@@ -292,3 +292,57 @@ class SupplierCSDVerification(TenantOwnedModel):
 
     class Meta:
         ordering = ['-verification_date']
+
+
+# ── Three-Quote Requirement (SCM Policy) ──────────────────────────────────────
+
+class QuoteStatus(models.TextChoices):
+    OPEN = 'open', 'Quotes Being Collected'
+    QUOTES_RECEIVED = 'quotes_received', 'Quotes Received — Evaluating'
+    AWARDED = 'awarded', 'Awarded'
+    CANCELLED = 'cancelled', 'Cancelled'
+    WAIVER_APPROVED = 'waiver_approved', 'Single-Source Waiver Approved'
+
+class ThreeQuoteRequirement(TenantOwnedModel):
+    """SCM policy: 3 written quotes required for R30 000 – R500 000 spend."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reference_number = models.CharField(max_length=50, blank=True)
+    description = models.CharField(max_length=255)
+    estimated_value = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=QuoteStatus.choices, default=QuoteStatus.OPEN)
+    required_by_date = models.DateField(null=True, blank=True)
+    budget_line = models.CharField(max_length=255, blank=True)
+    department = models.ForeignKey('structure.Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='quote_requirements')
+    requested_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='quote_requirements')
+    awarded_to_supplier = models.ForeignKey('Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='awarded_quotes')
+    awarded_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    award_motivation = models.TextField(blank=True)
+    waiver_reason = models.TextField(blank=True)
+    waiver_approved_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_waivers')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            import datetime
+            year = datetime.date.today().year
+            count = ThreeQuoteRequirement.objects.filter(organisation=self.organisation).count() + 1
+            self.reference_number = f'RFQ-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+class SupplierQuote(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    requirement = models.ForeignKey(ThreeQuoteRequirement, on_delete=models.CASCADE, related_name='quotes')
+    supplier = models.ForeignKey('Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='submitted_quotes')
+    supplier_name = models.CharField(max_length=255, blank=True, help_text='Free-text if supplier not on system')
+    quote_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    quote_date = models.DateField()
+    quote_reference = models.CharField(max_length=100, blank=True)
+    is_preferred = models.BooleanField(default=False)
+    disqualified = models.BooleanField(default=False)
+    disqualification_reason = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['quote_amount']

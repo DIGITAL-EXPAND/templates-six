@@ -242,7 +242,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
     return [
       {
         label: 'Board',
-        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.complianceCompact, allItems.perfReports, allItems.tasks],
+        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.tasks],
       },
     ];
   }
@@ -269,7 +269,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.calendar,
       allItems.workspaces,
       departmentItem(kind),
-      ...(kind === 'programming' ? [allItems.shows, allItems.seasonAnalytics, allItems.workflows] : []),
+      ...(kind === 'programming' ? [allItems.shows, allItems.journal, allItems.seasonAnalytics, allItems.workflows] : []),
+      ...(kind === 'foh' ? [allItems.safety] : []),
       allItems.tasks,
       allItems.documents,
       allItems.reports,

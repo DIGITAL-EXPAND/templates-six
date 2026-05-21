@@ -2087,6 +2087,101 @@ export interface PerformanceReport {
   approved_date: string | null;
 }
 
+// Phase 10 types
+export interface ProductionJournalEntry {
+  id: string;
+  operating_context: string;
+  entry_date: string;
+  entry_type: string;
+  title: string;
+  body: string;
+  author: string | null;
+  is_confidential: boolean;
+  requires_follow_up: boolean;
+  follow_up_by: string | null;
+  follow_up_completed: boolean;
+}
+
+export interface LeaveRequest {
+  id: string;
+  employee: string;
+  employee_name?: string;
+  leave_type: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  days_requested: string;
+  reason: string;
+  approved_by: string | null;
+  declined_reason: string;
+}
+
+export interface LiquorLicence {
+  id: string;
+  venue: string;
+  venue_name?: string;
+  licence_number: string;
+  licence_holder: string;
+  status: string;
+  issue_date: string | null;
+  expiry_date: string | null;
+  annual_fee: string | null;
+  issuing_authority: string;
+}
+
+export interface SafetyComplianceRecord {
+  id: string;
+  compliance_type: string;
+  venue: string | null;
+  operating_context: string | null;
+  is_compliant: boolean;
+  certificate_number: string;
+  issue_date: string | null;
+  expiry_date: string | null;
+  issuing_body: string;
+}
+
+export interface Donor {
+  id: string;
+  name: string;
+  category: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  is_section_18a: boolean;
+  tax_exempt_number: string;
+}
+
+export interface Donation {
+  id: string;
+  donor: string;
+  donor_name?: string;
+  financial_year: string;
+  status: string;
+  amount_pledged: string;
+  amount_received: string;
+  pledge_date: string;
+  received_date: string | null;
+  section_18a_issued: boolean;
+  purpose: string;
+}
+
+export interface BoardMemberProfile {
+  id: string;
+  full_name: string;
+  role_title: string;
+  status: string;
+  appointment_date: string;
+  term_end_date: string | null;
+  term_number: number;
+  appointing_authority: string;
+  expertise_areas: string;
+  committee_memberships: string;
+  is_independent: boolean;
+  annual_declaration_submitted: boolean;
+  annual_declaration_date: string | null;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

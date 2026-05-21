@@ -145,3 +145,31 @@ class StaffCallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         staff_call.confirmed_at = timezone.now()
         staff_call.save(update_fields=['status', 'confirmed_at', 'updated_at'])
         return Response(StaffCallSerializer(staff_call, context={'request': request}).data)
+
+
+# ── Liquor Licence & Safety Compliance ───────────────────────────────────────
+
+from .models import LiquorLicence, SafetyComplianceRecord  # noqa: E402
+from .serializers import LiquorLicenceSerializer, SafetyComplianceRecordSerializer  # noqa: E402
+
+
+class LiquorLicenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = LiquorLicence.objects.select_related('venue')
+    serializer_class = LiquorLicenceSerializer
+    filterset_fields = ['venue', 'status']
+    search_fields = ['licence_number', 'licence_holder', 'issuing_authority']
+    ordering = ['venue', 'status']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class SafetyComplianceRecordViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = SafetyComplianceRecord.objects.select_related('venue', 'operating_context', 'responsible_person')
+    serializer_class = SafetyComplianceRecordSerializer
+    filterset_fields = ['venue', 'operating_context', 'compliance_type', 'is_compliant']
+    search_fields = ['certificate_number', 'issuing_body', 'notes']
+    ordering = ['compliance_type', 'expiry_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

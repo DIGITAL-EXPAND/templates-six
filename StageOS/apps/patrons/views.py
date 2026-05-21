@@ -47,3 +47,40 @@ class PatronCommunicationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['patron', 'operating_context', 'channel']
     ordering = ['-sent_at']
+
+
+# ── Donors / Donations ────────────────────────────────────────────────────────
+
+from .models import Donor, Donation  # noqa: E402
+from .serializers import DonorSerializer, DonationSerializer  # noqa: E402
+
+
+class DonorViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Donor.objects.all()
+    serializer_class = DonorSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['category', 'is_section_18a']
+    search_fields = ['name', 'contact_person', 'email']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        donor = self.get_object()
+        donations = Donation.objects.filter(
+            donor=donor, organisation_id=request.user.organisation_id
+        ).order_by('-pledge_date')
+        return Response(DonationSerializer(donations, many=True, context={'request': request}).data)
+
+
+class DonationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Donation.objects.select_related('donor', 'operating_context')
+    serializer_class = DonationSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['donor', 'operating_context', 'status', 'financial_year']
+    ordering = ['-pledge_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

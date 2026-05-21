@@ -127,6 +127,13 @@ import type {
   VenueCapacityConfigItem,
   ShowItem,
   SeasonCloseOut,
+  ProductionJournalEntry,
+  LeaveRequest,
+  LiquorLicence,
+  SafetyComplianceRecord,
+  Donor,
+  Donation,
+  BoardMemberProfile,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1711,4 +1718,86 @@ export async function submitPerformanceReport(token: string, reportId: string) {
   });
   if (!res.ok) throw new Error('submit failed');
   return res.json() as Promise<PerformanceReport>;
+}
+
+// Phase 10 endpoints
+export async function fetchJournalEntries(token: string, contextId?: string) {
+  const qs = contextId ? `?operating_context=${contextId}` : '';
+  const res = await fetch(`/api/v1/programming/journal/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ProductionJournalEntry[] }>;
+}
+
+export async function createJournalEntry(token: string, payload: Partial<ProductionJournalEntry>) {
+  const res = await fetch('/api/v1/programming/journal/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<ProductionJournalEntry>;
+}
+
+export async function fetchLeaveRequests(token: string) {
+  const res = await fetch('/api/v1/accounts/leave-requests/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: LeaveRequest[] }>;
+}
+
+export async function createLeaveRequest(token: string, payload: Partial<LeaveRequest>) {
+  const res = await fetch('/api/v1/accounts/leave-requests/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<LeaveRequest>;
+}
+
+export async function approveLeaveRequest(token: string, id: string) {
+  const res = await fetch(`/api/v1/accounts/leave-requests/${id}/approve/`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('approve failed');
+  return res.json() as Promise<LeaveRequest>;
+}
+
+export async function fetchLiquorLicences(token: string) {
+  const res = await fetch('/api/v1/operations/liquor-licences/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: LiquorLicence[] }>;
+}
+
+export async function fetchSafetyRecords(token: string) {
+  const res = await fetch('/api/v1/operations/safety-compliance/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: SafetyComplianceRecord[] }>;
+}
+
+export async function fetchDonors(token: string) {
+  const res = await fetch('/api/v1/patrons/donors/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: Donor[] }>;
+}
+
+export async function fetchDonations(token: string) {
+  const res = await fetch('/api/v1/patrons/donations/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: Donation[] }>;
+}
+
+export async function createDonor(token: string, payload: Partial<Donor>) {
+  const res = await fetch('/api/v1/patrons/donors/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<Donor>;
+}
+
+export async function fetchBoardMembers(token: string) {
+  const res = await fetch('/api/v1/governance/board-members/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: BoardMemberProfile[] }>;
 }

@@ -124,3 +124,22 @@ class OperatingProfileSerializer(serializers.Serializer):
             ],
             'active_modules': active_modules,
         }
+
+
+# ── Leave Requests ────────────────────────────────────────────────────────────
+
+from .models import LeaveRequest  # noqa: E402
+
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeaveRequest
+        fields = [
+            'id', 'employee', 'leave_type', 'status', 'start_date', 'end_date',
+            'days_requested', 'reason', 'approved_by', 'approved_at',
+            'declined_reason', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'status', 'approved_by', 'approved_at', 'declined_reason',
+            'created_at', 'updated_at',
+        ]

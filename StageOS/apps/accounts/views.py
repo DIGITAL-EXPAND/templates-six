@@ -430,3 +430,48 @@ class POPIAErasureRequestView(APIView):
         return Response(
             {'detail': 'Your erasure request has been submitted. The Information Officer will be notified.'}
         )
+
+
+# ── Leave Requests ────────────────────────────────────────────────────────────
+
+from django.utils import timezone as _tz
+from rest_framework import viewsets as _vsets
+from rest_framework.decorators import action as _action
+from rest_framework.response import Response as _Response
+from rest_framework.permissions import IsAuthenticated as _IsAuthenticated
+from common.views import TenantScopedMixin as _TenantScopedMixin
+from .models import LeaveRequest, LeaveStatus
+from .serializers import LeaveRequestSerializer
+
+
+class LeaveRequestViewSet(_TenantScopedMixin, _vsets.ModelViewSet):
+    queryset = LeaveRequest.objects.select_related('employee', 'approved_by')
+    serializer_class = LeaveRequestSerializer
+    permission_classes = [_IsAuthenticated]
+    filterset_fields = ['employee', 'leave_type', 'status', 'start_date', 'end_date']
+    ordering = ['-start_date']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organisation_id=self.request.user.organisation_id)
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @_action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        leave_request = self.get_object()
+        leave_request.status = LeaveStatus.APPROVED
+        leave_request.approved_by = request.user
+        leave_request.approved_at = _tz.now()
+        leave_request.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+        return _Response(LeaveRequestSerializer(leave_request, context={'request': request}).data)
+
+    @_action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        leave_request = self.get_object()
+        reason = request.data.get('reason', '')
+        leave_request.status = LeaveStatus.DECLINED
+        leave_request.declined_reason = reason
+        leave_request.save(update_fields=['status', 'declined_reason', 'updated_at'])
+        return _Response(LeaveRequestSerializer(leave_request, context={'request': request}).data)

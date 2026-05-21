@@ -508,3 +508,31 @@ class ProductionLicenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Production Journal ────────────────────────────────────────────────────────
+
+from .models import ProductionJournalEntry  # noqa: E402
+from .serializers import ProductionJournalEntrySerializer  # noqa: E402
+
+
+class ProductionJournalEntryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ProductionJournalEntry.objects.select_related('operating_context', 'author')
+    serializer_class = ProductionJournalEntrySerializer
+    filterset_fields = ['operating_context', 'entry_type', 'is_confidential', 'requires_follow_up', 'follow_up_completed']
+    search_fields = ['title', 'body']
+    ordering_fields = ['entry_date', 'created_at', 'entry_type']
+    ordering = ['-entry_date', '-created_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        operating_context = self.request.query_params.get('operating_context')
+        if operating_context:
+            qs = qs.filter(operating_context_id=operating_context)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organisation_id=self.request.user.organisation_id,
+            author=self.request.user,
+        )

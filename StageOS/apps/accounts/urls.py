@@ -1,7 +1,9 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     AcceptInviteView,
     InviteUserView,
+    LeaveRequestViewSet,
     MeView,
     MyDashboardView,
     MyNavigationView,
@@ -15,6 +17,9 @@ from .views import (
     PasswordResetRequestView,
     UserListCreateView,
 )
+
+router = DefaultRouter()
+router.register('leave-requests', LeaveRequestViewSet, basename='leave-request')
 
 urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
@@ -34,4 +39,6 @@ urlpatterns = [
     path('popia/consent/', POPIAConsentView.as_view(), name='popia-consent'),
     path('popia/my-data/', POPIAMyDataView.as_view(), name='popia-my-data'),
     path('popia/erasure-request/', POPIAErasureRequestView.as_view(), name='popia-erasure-request'),
+    # HR
+    path('', include(router.urls)),
 ]

@@ -9,6 +9,7 @@ from .views import (
     IUFWIncidentViewSet, IUFWInvestigationViewSet, IUFWRecoveryViewSet,
     AGAuditRequestViewSet, AGAuditEvidenceViewSet,
     ConflictOfInterestViewSet, PerformanceReportViewSet,
+    BoardMemberProfileViewSet,
 )
 
 router = DefaultRouter()
@@ -34,5 +35,6 @@ router.register('ag-audit-requests', AGAuditRequestViewSet, basename='ag-audit-r
 router.register('ag-audit-evidence', AGAuditEvidenceViewSet, basename='ag-audit-evidence')
 router.register('conflict-of-interest', ConflictOfInterestViewSet, basename='conflict-of-interest')
 router.register('performance-reports', PerformanceReportViewSet, basename='performance-report')
+router.register('board-members', BoardMemberProfileViewSet, basename='board-member')
 
 urlpatterns = router.urls

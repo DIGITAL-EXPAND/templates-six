@@ -719,3 +719,35 @@ class PerformanceReport(TenantOwnedModel):
     class Meta:
         unique_together = [('organisation', 'compact', 'quarter')]
         ordering = ['compact__financial_year', 'quarter']
+
+
+# ── Board Member Profiles ─────────────────────────────────────────────────────
+
+class BoardMemberStatus(models.TextChoices):
+    ACTIVE = 'active', 'Active'
+    RESIGNED = 'resigned', 'Resigned'
+    TERM_EXPIRED = 'term_expired', 'Term Expired'
+    REMOVED = 'removed', 'Removed'
+
+class BoardMemberProfile(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='board_profiles')
+    full_name = models.CharField(max_length=255)
+    role_title = models.CharField(max_length=100, help_text='e.g. Chairperson, Non-Executive Director')
+    status = models.CharField(max_length=20, choices=BoardMemberStatus.choices, default=BoardMemberStatus.ACTIVE)
+    appointment_date = models.DateField()
+    term_end_date = models.DateField(null=True, blank=True)
+    term_number = models.PositiveSmallIntegerField(default=1)
+    appointing_authority = models.CharField(max_length=255, blank=True)
+    qualifications = models.TextField(blank=True)
+    expertise_areas = models.CharField(max_length=255, blank=True)
+    committee_memberships = models.CharField(max_length=255, blank=True)
+    is_independent = models.BooleanField(default=True)
+    annual_declaration_submitted = models.BooleanField(default=False)
+    annual_declaration_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['status', 'appointment_date']

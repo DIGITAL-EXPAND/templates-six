@@ -581,3 +581,34 @@ class PerformanceReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         report.approved_date = timezone.now().date()
         report.save(update_fields=['status', 'approved_by', 'approved_date'])
         return Response(PerformanceReportSerializer(report, context={'request': request}).data)
+
+
+# ── Board Member Profiles ─────────────────────────────────────────────────────
+
+from .models import BoardMemberProfile, BoardMemberStatus  # noqa: E402
+from .serializers import BoardMemberProfileSerializer  # noqa: E402
+
+
+class BoardMemberProfileViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = BoardMemberProfile.objects.select_related('user')
+    serializer_class = BoardMemberProfileSerializer
+    filterset_fields = ['status', 'is_independent', 'annual_declaration_submitted']
+    search_fields = ['full_name', 'role_title', 'expertise_areas', 'committee_memberships']
+    ordering = ['status', 'appointment_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        today = timezone.now().date()
+        qs = self.get_queryset().filter(status=BoardMemberStatus.ACTIVE)
+        results = []
+        for member in qs:
+            days_until_term_end = None
+            if member.term_end_date:
+                days_until_term_end = (member.term_end_date - today).days
+            data = BoardMemberProfileSerializer(member, context={'request': request}).data
+            data['days_until_term_end'] = days_until_term_end
+            results.append(data)
+        return Response(results)

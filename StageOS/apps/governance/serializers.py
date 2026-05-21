@@ -474,3 +474,27 @@ class PerformanceReportSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Prepared by')
+
+
+# ── Board Member Profiles ─────────────────────────────────────────────────────
+
+from .models import BoardMemberProfile  # noqa: E402
+
+
+class BoardMemberProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BoardMemberProfile
+        fields = [
+            'id', 'user', 'full_name', 'role_title', 'status',
+            'appointment_date', 'term_end_date', 'term_number',
+            'appointing_authority', 'qualifications', 'expertise_areas',
+            'committee_memberships', 'is_independent',
+            'annual_declaration_submitted', 'annual_declaration_date',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_user(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'User')

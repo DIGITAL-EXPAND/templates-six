@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CalendarIssueViewSet, IntakeRequestViewSet, IntakeReviewViewSet, ProducerAssignmentViewSet,
     VenueHoldViewSet, CalendarSlotViewSet, SeasonViewSet, ShowViewSet, PerformanceViewSet,
-    ProductionLicenceViewSet,
+    ProductionLicenceViewSet, ProductionJournalEntryViewSet,
 )
 
 router = DefaultRouter()
@@ -16,4 +16,5 @@ router.register('seasons', SeasonViewSet, basename='season')
 router.register('shows', ShowViewSet, basename='show')
 router.register('performances', PerformanceViewSet, basename='performance')
 router.register('production-licences', ProductionLicenceViewSet, basename='production-licence')
+router.register('journal', ProductionJournalEntryViewSet, basename='production-journal')
 urlpatterns = router.urls

@@ -114,3 +114,48 @@ class StaffCallSerializer(serializers.ModelSerializer):
             'confirmed_at', 'notes', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'confirmed_at', 'created_at', 'updated_at']
+
+
+# ── Liquor Licence & Safety Compliance ───────────────────────────────────────
+
+from .models import LiquorLicence, SafetyComplianceRecord  # noqa: E402
+
+
+class LiquorLicenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LiquorLicence
+        fields = [
+            'id', 'venue', 'licence_number', 'licence_holder', 'status',
+            'issue_date', 'expiry_date', 'annual_fee', 'last_paid_date',
+            'issuing_authority', 'conditions', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+
+class SafetyComplianceRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SafetyComplianceRecord
+        fields = [
+            'id', 'compliance_type', 'venue', 'operating_context', 'is_compliant',
+            'certificate_number', 'issue_date', 'expiry_date', 'issuing_body',
+            'responsible_person', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_venue(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_operating_context(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_responsible_person(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Responsible person')

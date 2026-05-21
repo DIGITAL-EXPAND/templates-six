@@ -256,3 +256,27 @@ class ProductionLicenceSerializer(serializers.ModelSerializer):
 
     def validate_operating_context(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+
+# ── Production Journal ────────────────────────────────────────────────────────
+
+from .models import ProductionJournalEntry  # noqa: E402
+
+
+class ProductionJournalEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductionJournalEntry
+        fields = [
+            'id', 'operating_context', 'entry_date', 'entry_type', 'title', 'body',
+            'author', 'is_confidential', 'requires_follow_up', 'follow_up_by',
+            'follow_up_completed', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_author(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Author')

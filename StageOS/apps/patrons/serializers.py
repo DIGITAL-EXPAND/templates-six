@@ -35,3 +35,32 @@ class PatronCommunicationSerializer(serializers.ModelSerializer):
         fields = ['id', 'patron', 'subject', 'body', 'channel', 'sent_at',
                   'sent_by', 'operating_context', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+# ── Donors / Donations ────────────────────────────────────────────────────────
+
+from rest_framework import serializers as _s
+from .models import Donor, Donation  # noqa: E402
+
+
+class DonationSerializer(_s.ModelSerializer):
+    class Meta:
+        model = Donation
+        fields = [
+            'id', 'donor', 'operating_context', 'financial_year', 'status',
+            'amount_pledged', 'amount_received', 'pledge_date', 'received_date',
+            'section_18a_issued', 'section_18a_date', 'purpose', 'conditions',
+            'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class DonorSerializer(_s.ModelSerializer):
+    class Meta:
+        model = Donor
+        fields = [
+            'id', 'name', 'category', 'contact_person', 'email', 'phone',
+            'address', 'tax_exempt_number', 'is_section_18a', 'notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

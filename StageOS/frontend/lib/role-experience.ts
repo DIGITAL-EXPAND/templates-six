@@ -115,6 +115,10 @@ const allItems = {
   licences:         { label: 'IP Licences',          href: '/programming/licences',  icon: FileText },
   rentals:          { label: 'Venue Rentals',        href: '/structure/rentals',     icon: Landmark },
   csdRegister:      { label: 'CSD Register',         href: '/suppliers/csd',         icon: ClipboardCheck },
+  declarations:     { label: 'COI Register',         href: '/governance/declarations', icon: FileText },
+  rfq:              { label: 'RFQ Register',          href: '/suppliers/rfq',           icon: ShoppingCart },
+  perfReports:      { label: 'Performance Reports',  href: '/governance/performance',  icon: BarChart3 },
+  entityConfig:     { label: 'Entity Config',         href: '/settings/entity',         icon: Settings },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -152,6 +156,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.approvals,
           allItems.contracts,
           allItems.suppliers,
+          allItems.rfq,
           allItems.artists,
           allItems.licences,
           allItems.rentals,
@@ -172,7 +177,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.iufw, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.delegation, allItems.venueManagement],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -193,6 +198,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.boardMeetings,
           allItems.complianceCompact,
           allItems.iufw,
+          allItems.declarations,
+          allItems.perfReports,
           allItems.agAudit,
           allItems.reports,
           allItems.audit,
@@ -224,7 +231,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
     return [
       {
         label: 'Board',
-        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.complianceCompact, allItems.tasks],
+        items: [allItems.dashboard, allItems.reports, allItems.governance, allItems.complianceCompact, allItems.perfReports, allItems.tasks],
       },
     ];
   }
@@ -256,7 +263,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.documents,
       allItems.reports,
     ];
-    if (kind === 'scm') deptItems.push(allItems.procurement);
+    if (kind === 'scm') deptItems.push(allItems.procurement, allItems.rfq);
     // Ticketing managers get box office sub-pages
     if (kind === 'ticketing') {
       deptItems.splice(5, 0, allItems.boxOffice, allItems.tillRecon);

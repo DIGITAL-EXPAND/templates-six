@@ -62,3 +62,83 @@ class EquipmentRequirementSerializer(serializers.ModelSerializer):
         attrs = super().validate(attrs)
         require_non_negative(attrs, ['quantity'])
         return attrs
+
+
+# ── Cue Sheets ────────────────────────────────────────────────────────────────
+
+from .models import CueSheet, CueLine, PropsItem, WardrobeItem  # noqa: E402
+
+
+class CueLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CueLine
+        fields = [
+            'id', 'cue_sheet', 'cue_number', 'page_ref', 'action',
+            'standby_note', 'follow_on', 'notes', 'order',
+        ]
+        read_only_fields = ['id']
+
+    def validate_cue_sheet(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Cue sheet')
+
+
+class CueSheetSerializer(serializers.ModelSerializer):
+    lines = CueLineSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CueSheet
+        fields = [
+            'id', 'operating_context', 'version', 'title', 'department',
+            'is_master', 'prepared_by', 'approved_by', 'notes',
+            'created_at', 'updated_at', 'lines',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_prepared_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Prepared by')
+
+    def validate_approved_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Approved by')
+
+
+# ── Props & Wardrobe ──────────────────────────────────────────────────────────
+
+class PropsItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropsItem
+        fields = [
+            'id', 'name', 'description', 'category', 'condition',
+            'storage_location', 'is_hired', 'hire_company', 'hire_cost',
+            'hire_return_date', 'current_production', 'is_available',
+            'purchase_cost', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_current_production(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Current production')
+
+
+class WardrobeItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WardrobeItem
+        fields = [
+            'id', 'name', 'category', 'character', 'size', 'condition',
+            'is_hired', 'hire_company', 'hire_cost', 'hire_return_date',
+            'current_production', 'assigned_to_performer', 'storage_location',
+            'cleaning_required', 'purchase_cost', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_current_production(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Current production')

@@ -87,3 +87,85 @@ class EquipmentRequirementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     serializer_class = EquipmentRequirementSerializer
     filterset_fields = ['rider', 'source']
     ordering = ['item']
+
+
+# ── Cue Sheets ────────────────────────────────────────────────────────────────
+
+from .models import CueSheet, CueLine, PropsItem, WardrobeItem  # noqa: E402
+from .serializers import (  # noqa: E402
+    CueSheetSerializer, CueLineSerializer, PropsItemSerializer, WardrobeItemSerializer,
+)
+
+
+class CueSheetViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CueSheet.objects.select_related(
+        'operating_context', 'prepared_by', 'approved_by',
+    ).prefetch_related('lines')
+    serializer_class = CueSheetSerializer
+    filterset_fields = ['operating_context', 'department', 'is_master']
+    search_fields = ['title', 'notes']
+    ordering = ['department', 'version']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class CueLineViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CueLine.objects.select_related('cue_sheet')
+    serializer_class = CueLineSerializer
+    filterset_fields = ['cue_sheet']
+    ordering = ['order', 'cue_number']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Props & Wardrobe ──────────────────────────────────────────────────────────
+
+class PropsItemViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = PropsItem.objects.select_related('current_production')
+    serializer_class = PropsItemSerializer
+    filterset_fields = ['category', 'condition', 'is_available', 'is_hired', 'current_production']
+    search_fields = ['name', 'description', 'storage_location', 'hire_company']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def checkin(self, request, pk=None):
+        item = self.get_object()
+        item.is_available = True
+        item.current_production = None
+        item.save(update_fields=['is_available', 'current_production'])
+        return Response(PropsItemSerializer(item, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def checkout(self, request, pk=None):
+        from rest_framework.exceptions import ValidationError
+        from apps.contexts.models import OperatingContext
+        item = self.get_object()
+        production_id = request.data.get('current_production')
+        if not production_id:
+            raise ValidationError({'current_production': 'This field is required.'})
+        production = OperatingContext.objects.filter(
+            id=production_id,
+            organisation_id=request.user.organisation_id,
+        ).first()
+        if not production:
+            raise ValidationError({'current_production': 'Production not found in your organisation.'})
+        item.is_available = False
+        item.current_production = production
+        item.save(update_fields=['is_available', 'current_production'])
+        return Response(PropsItemSerializer(item, context={'request': request}).data)
+
+
+class WardrobeItemViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = WardrobeItem.objects.select_related('current_production')
+    serializer_class = WardrobeItemSerializer
+    filterset_fields = ['category', 'condition', 'is_hired', 'current_production', 'cleaning_required']
+    search_fields = ['name', 'character', 'assigned_to_performer', 'storage_location']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

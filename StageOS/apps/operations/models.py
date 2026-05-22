@@ -346,3 +346,196 @@ class CrewCallUnionCheck(TenantOwnedModel):
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     compliance_notes = models.TextField(blank=True)
     checked_at = models.DateTimeField(auto_now_add=True)
+
+
+# ── Maintenance & Facilities ──────────────────────────────────────────────────
+
+class MaintenancePriority(models.TextChoices):
+    CRITICAL = 'critical', 'Critical — Production Impacting'
+    HIGH = 'high', 'High'
+    MEDIUM = 'medium', 'Medium'
+    LOW = 'low', 'Low'
+
+class MaintenanceStatus(models.TextChoices):
+    LOGGED = 'logged', 'Logged'
+    ASSIGNED = 'assigned', 'Assigned'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    AWAITING_PARTS = 'awaiting_parts', 'Awaiting Parts / Contractor'
+    RESOLVED = 'resolved', 'Resolved'
+    CLOSED = 'closed', 'Closed'
+    ESCALATED = 'escalated', 'Escalated to Management'
+
+class MaintenanceCategory(models.TextChoices):
+    ELECTRICAL = 'electrical', 'Electrical'
+    PLUMBING = 'plumbing', 'Plumbing'
+    STRUCTURAL = 'structural', 'Structural'
+    HVAC = 'hvac', 'HVAC / Air Conditioning'
+    STAGE_EQUIPMENT = 'stage_equipment', 'Stage Equipment'
+    LIGHTING_INFRA = 'lighting_infra', 'Lighting Infrastructure'
+    SOUND_INFRA = 'sound_infra', 'Sound Infrastructure'
+    IT_SYSTEMS = 'it_systems', 'IT / AV Systems'
+    SAFETY = 'safety', 'Safety / Fire'
+    GROUNDS = 'grounds', 'Grounds / Exterior'
+    CLEANING = 'cleaning', 'Cleaning / Hygiene'
+    OTHER = 'other', 'Other'
+
+class MaintenanceTicket(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ticket_number = models.CharField(max_length=50, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=MaintenanceCategory.choices)
+    priority = models.CharField(max_length=10, choices=MaintenancePriority.choices, default=MaintenancePriority.MEDIUM)
+    status = models.CharField(max_length=20, choices=MaintenanceStatus.choices, default=MaintenanceStatus.LOGGED)
+    venue = models.ForeignKey('structure.Venue', on_delete=models.SET_NULL, null=True, blank=True, related_name='maintenance_tickets')
+    location_detail = models.CharField(max_length=255, blank=True, help_text='Specific location e.g. Stage Left, Dressing Room 2')
+    is_production_impacting = models.BooleanField(default=False)
+    affected_production = models.ForeignKey('contexts.OperatingContext', on_delete=models.SET_NULL, null=True, blank=True, related_name='maintenance_tickets')
+    reported_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_maintenance')
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_maintenance')
+    target_resolution_date = models.DateField(null=True, blank=True)
+    resolved_date = models.DateField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True)
+    cost_estimate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    actual_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    contractor_name = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_number:
+            import datetime
+            year = datetime.date.today().year
+            count = MaintenanceTicket.objects.filter(organisation=self.organisation).count() + 1
+            self.ticket_number = f'MNT-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-created_at']
+
+class MaintenanceSchedule(TenantOwnedModel):
+    """Recurring maintenance tasks — e.g. monthly fire system check."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    category = models.CharField(max_length=20, choices=MaintenanceCategory.choices)
+    venue = models.ForeignKey('structure.Venue', on_delete=models.SET_NULL, null=True, blank=True, related_name='maintenance_schedules')
+    frequency = models.CharField(max_length=20, choices=[
+        ('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'), ('biannual', 'Bi-Annual'), ('annual', 'Annual'),
+    ])
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='maintenance_schedules')
+    last_completed_date = models.DateField(null=True, blank=True)
+    next_due_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    instructions = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class InspectionRecord(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    inspection_type = models.CharField(max_length=50, choices=[
+        ('fire_safety', 'Fire Safety'), ('electrical_coc', 'Electrical CoC'),
+        ('structural', 'Structural'), ('ohs', 'OHS'), ('lift', 'Lift / Elevator'),
+        ('pressure_vessel', 'Pressure Vessel'), ('general', 'General'),
+    ])
+    venue = models.ForeignKey('structure.Venue', on_delete=models.PROTECT, related_name='inspection_records')
+    inspection_date = models.DateField()
+    inspector_name = models.CharField(max_length=255)
+    inspector_company = models.CharField(max_length=255, blank=True)
+    passed = models.BooleanField(default=True)
+    certificate_number = models.CharField(max_length=100, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    findings = models.TextField(blank=True)
+    corrective_actions_required = models.TextField(blank=True)
+    next_inspection_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class VenueDowntime(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    venue = models.ForeignKey('structure.Venue', on_delete=models.CASCADE, related_name='downtime_records')
+    reason = models.CharField(max_length=255)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField(null=True, blank=True)
+    is_resolved = models.BooleanField(default=False)
+    production_impact = models.TextField(blank=True)
+    ticket = models.ForeignKey(MaintenanceTicket, on_delete=models.SET_NULL, null=True, blank=True, related_name='downtime_records')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def downtime_hours(self):
+        if self.end_datetime:
+            delta = self.end_datetime - self.start_datetime
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+
+# ── FOH Audience Complaints & Accessibility ───────────────────────────────────
+
+class ComplaintStatus(models.TextChoices):
+    RECEIVED = 'received', 'Received'
+    ACKNOWLEDGED = 'acknowledged', 'Acknowledged'
+    UNDER_REVIEW = 'under_review', 'Under Review'
+    RESOLVED = 'resolved', 'Resolved'
+    ESCALATED = 'escalated', 'Escalated'
+    CLOSED = 'closed', 'Closed'
+
+class AudienceComplaint(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reference_number = models.CharField(max_length=50, blank=True)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.SET_NULL, null=True, blank=True, related_name='audience_complaints')
+    complaint_date = models.DateField()
+    complainant_name = models.CharField(max_length=255, blank=True)
+    complainant_email = models.EmailField(blank=True)
+    complainant_phone = models.CharField(max_length=30, blank=True)
+    is_anonymous = models.BooleanField(default=False)
+    category = models.CharField(max_length=30, choices=[
+        ('service', 'Customer Service'), ('facility', 'Facility / Venue'),
+        ('technical', 'Technical / Show Quality'), ('safety', 'Safety Concern'),
+        ('accessibility', 'Accessibility'), ('staff', 'Staff Conduct'),
+        ('ticketing', 'Ticketing / Pricing'), ('other', 'Other'),
+    ])
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=ComplaintStatus.choices, default=ComplaintStatus.RECEIVED)
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='complaint_assignments')
+    resolution = models.TextField(blank=True)
+    resolved_date = models.DateField(null=True, blank=True)
+    requires_follow_up = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            import datetime
+            year = datetime.date.today().year
+            count = AudienceComplaint.objects.filter(organisation=self.organisation).count() + 1
+            self.reference_number = f'COMP-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+class AccessibilityRequirement(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.CASCADE, related_name='accessibility_requirements')
+    performance_date = models.DateField(null=True, blank=True)
+    requirement_type = models.CharField(max_length=30, choices=[
+        ('wheelchair', 'Wheelchair Access'), ('hearing_loop', 'Hearing Loop'),
+        ('audio_description', 'Audio Description'), ('sign_language', 'Sign Language Interpretation'),
+        ('large_print', 'Large Print Programme'), ('braille', 'Braille Programme'),
+        ('relaxed', 'Relaxed Performance'), ('carer', 'Carer Admission'),
+        ('parking', 'Accessible Parking'), ('other', 'Other'),
+    ])
+    patron_name = models.CharField(max_length=255, blank=True)
+    patron_contact = models.CharField(max_length=255, blank=True)
+    details = models.TextField(blank=True)
+    is_confirmed = models.BooleanField(default=False)
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='accessibility_assignments')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class LateSeatingPolicy(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.CASCADE, related_name='late_seating_policies')
+    cutoff_minutes = models.PositiveSmallIntegerField(default=15, help_text='Minutes after start time when late seating is no longer permitted')
+    holding_area = models.CharField(max_length=255, blank=True)
+    policy_description = models.TextField()
+    exceptions_allowed = models.BooleanField(default=True)
+    exception_approval_role = models.CharField(max_length=50, blank=True, help_text='Role that can approve exceptions e.g. House Manager')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

@@ -4,6 +4,9 @@ from .views import (
     ShowCallViewSet, PostShowReportViewSet, StaffCallViewSet,
     LiquorLicenceViewSet, SafetyComplianceRecordViewSet,
     UnionAgreementViewSet, UnionCallRateViewSet, CrewCallUnionCheckViewSet,
+    MaintenanceTicketViewSet, MaintenanceScheduleViewSet,
+    InspectionRecordViewSet, VenueDowntimeViewSet,
+    AudienceComplaintViewSet, AccessibilityRequirementViewSet, LateSeatingPolicyViewSet,
 )
 
 router = DefaultRouter()
@@ -18,4 +21,11 @@ router.register('safety-compliance', SafetyComplianceRecordViewSet, basename='sa
 router.register('union-agreements', UnionAgreementViewSet, basename='union-agreement')
 router.register('union-rates', UnionCallRateViewSet, basename='union-rate')
 router.register('crew-call-union-checks', CrewCallUnionCheckViewSet, basename='crew-call-union-check')
+router.register('maintenance-tickets', MaintenanceTicketViewSet, basename='maintenance-ticket')
+router.register('maintenance-schedules', MaintenanceScheduleViewSet, basename='maintenance-schedule')
+router.register('inspections', InspectionRecordViewSet, basename='inspection')
+router.register('venue-downtime', VenueDowntimeViewSet, basename='venue-downtime')
+router.register('complaints', AudienceComplaintViewSet, basename='complaint')
+router.register('accessibility', AccessibilityRequirementViewSet, basename='accessibility')
+router.register('late-seating', LateSeatingPolicyViewSet, basename='late-seating')
 urlpatterns = router.urls

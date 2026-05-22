@@ -253,3 +253,208 @@ class CrewCallUnionCheckViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Maintenance & Facilities ──────────────────────────────────────────────────
+
+from .models import (  # noqa: E402
+    MaintenanceTicket, MaintenanceSchedule, InspectionRecord, VenueDowntime,
+    AudienceComplaint, AccessibilityRequirement, LateSeatingPolicy,
+)
+from .serializers import (  # noqa: E402
+    MaintenanceTicketSerializer, MaintenanceScheduleSerializer,
+    InspectionRecordSerializer, VenueDowntimeSerializer,
+    AudienceComplaintSerializer, AccessibilityRequirementSerializer,
+    LateSeatingPolicySerializer,
+)
+
+
+class MaintenanceTicketViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = MaintenanceTicket.objects.select_related(
+        'venue', 'affected_production', 'reported_by', 'assigned_to',
+    )
+    serializer_class = MaintenanceTicketSerializer
+    filterset_fields = ['status', 'priority', 'category', 'venue', 'is_production_impacting']
+    search_fields = ['title', 'ticket_number', 'description', 'location_detail']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organisation_id=self.request.user.organisation_id,
+            reported_by=self.request.user,
+        )
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        from django.contrib.auth import get_user_model
+        ticket = self.get_object()
+        user_id = request.data.get('user_id')
+        if not user_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'user_id': 'This field is required.'})
+        User = get_user_model()
+        assignee = User.objects.filter(id=user_id, organisation_id=request.user.organisation_id).first()
+        if not assignee:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'user_id': 'User not found in your organisation.'})
+        ticket.assigned_to = assignee
+        ticket.status = 'assigned'
+        ticket.save(update_fields=['assigned_to', 'status', 'updated_at'])
+        return Response(MaintenanceTicketSerializer(ticket, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        import datetime
+        ticket = self.get_object()
+        ticket.resolution_notes = request.data.get('resolution_notes', '')
+        ticket.status = 'resolved'
+        ticket.resolved_date = datetime.date.today()
+        ticket.save(update_fields=['resolution_notes', 'status', 'resolved_date', 'updated_at'])
+        return Response(MaintenanceTicketSerializer(ticket, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def escalate(self, request, pk=None):
+        ticket = self.get_object()
+        ticket.status = 'escalated'
+        ticket.priority = 'critical'
+        ticket.save(update_fields=['status', 'priority', 'updated_at'])
+        return Response(MaintenanceTicketSerializer(ticket, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'])
+    def kpis(self, request):
+        import datetime
+        from django.db.models import Avg, F, ExpressionWrapper, DurationField
+        qs = self.get_queryset()
+        open_statuses = ['logged', 'assigned', 'in_progress', 'awaiting_parts', 'escalated']
+        total_open = qs.filter(status__in=open_statuses).count()
+        critical_count = qs.filter(status__in=open_statuses, priority='critical').count()
+        today = datetime.date.today()
+        overdue_count = qs.filter(
+            status__in=open_statuses,
+            target_resolution_date__lt=today,
+        ).count()
+        production_impacting_count = qs.filter(
+            status__in=open_statuses, is_production_impacting=True,
+        ).count()
+        resolved_qs = qs.filter(status__in=['resolved', 'closed'], resolved_date__isnull=False)
+        avg_resolution_days = None
+        if resolved_qs.exists():
+            total_days = sum(
+                (r.resolved_date - r.created_at.date()).days
+                for r in resolved_qs
+                if r.resolved_date and r.created_at
+            )
+            avg_resolution_days = round(total_days / resolved_qs.count(), 1)
+        return Response({
+            'total_open': total_open,
+            'critical_count': critical_count,
+            'overdue_count': overdue_count,
+            'avg_resolution_days': avg_resolution_days,
+            'production_impacting_count': production_impacting_count,
+        })
+
+
+class MaintenanceScheduleViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = MaintenanceSchedule.objects.select_related('venue', 'assigned_to')
+    serializer_class = MaintenanceScheduleSerializer
+    filterset_fields = ['venue', 'category', 'frequency', 'is_active']
+    search_fields = ['title']
+    ordering = ['next_due_date', 'title']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        import datetime
+        from dateutil.relativedelta import relativedelta
+        schedule = self.get_object()
+        today = datetime.date.today()
+        schedule.last_completed_date = today
+        freq_map = {
+            'daily': relativedelta(days=1),
+            'weekly': relativedelta(weeks=1),
+            'monthly': relativedelta(months=1),
+            'quarterly': relativedelta(months=3),
+            'biannual': relativedelta(months=6),
+            'annual': relativedelta(years=1),
+        }
+        delta = freq_map.get(schedule.frequency)
+        schedule.next_due_date = today + delta if delta else None
+        schedule.save(update_fields=['last_completed_date', 'next_due_date'])
+        return Response(MaintenanceScheduleSerializer(schedule, context={'request': request}).data)
+
+
+class InspectionRecordViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = InspectionRecord.objects.select_related('venue')
+    serializer_class = InspectionRecordSerializer
+    filterset_fields = ['venue', 'inspection_type', 'passed']
+    search_fields = ['inspector_name', 'inspector_company', 'certificate_number']
+    ordering = ['-inspection_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class VenueDowntimeViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = VenueDowntime.objects.select_related('venue', 'ticket')
+    serializer_class = VenueDowntimeSerializer
+    filterset_fields = ['venue', 'is_resolved']
+    search_fields = ['reason']
+    ordering = ['-start_datetime']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        from django.utils import timezone
+        downtime = self.get_object()
+        downtime.is_resolved = True
+        downtime.end_datetime = timezone.now()
+        downtime.save(update_fields=['is_resolved', 'end_datetime'])
+        return Response(VenueDowntimeSerializer(downtime, context={'request': request}).data)
+
+
+# ── Audience Complaints & Accessibility ───────────────────────────────────────
+
+class AudienceComplaintViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AudienceComplaint.objects.select_related('operating_context', 'assigned_to')
+    serializer_class = AudienceComplaintSerializer
+    filterset_fields = ['status', 'category', 'operating_context', 'requires_follow_up']
+    search_fields = ['reference_number', 'complainant_name', 'complainant_email', 'description']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        import datetime
+        complaint = self.get_object()
+        complaint.resolution = request.data.get('resolution', '')
+        complaint.status = 'resolved'
+        complaint.resolved_date = datetime.date.today()
+        complaint.save(update_fields=['resolution', 'status', 'resolved_date', 'updated_at'])
+        return Response(AudienceComplaintSerializer(complaint, context={'request': request}).data)
+
+
+class AccessibilityRequirementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AccessibilityRequirement.objects.select_related('operating_context', 'assigned_to')
+    serializer_class = AccessibilityRequirementSerializer
+    filterset_fields = ['operating_context', 'requirement_type', 'is_confirmed']
+    search_fields = ['patron_name', 'patron_contact', 'details']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class LateSeatingPolicyViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = LateSeatingPolicy.objects.select_related('operating_context')
+    serializer_class = LateSeatingPolicySerializer
+    filterset_fields = ['operating_context', 'exceptions_allowed']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

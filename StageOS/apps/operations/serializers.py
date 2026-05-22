@@ -215,3 +215,160 @@ class CrewCallUnionCheckSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Applicable rate')
+
+
+# ── Maintenance & Facilities ──────────────────────────────────────────────────
+
+from .models import (  # noqa: E402
+    MaintenanceTicket, MaintenanceSchedule, InspectionRecord, VenueDowntime,
+    AudienceComplaint, AccessibilityRequirement, LateSeatingPolicy,
+)
+
+
+class MaintenanceTicketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MaintenanceTicket
+        fields = [
+            'id', 'ticket_number', 'title', 'description', 'category',
+            'priority', 'status', 'venue', 'location_detail',
+            'is_production_impacting', 'affected_production',
+            'reported_by', 'assigned_to', 'target_resolution_date',
+            'resolved_date', 'resolution_notes', 'cost_estimate',
+            'actual_cost', 'contractor_name', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'ticket_number', 'created_at', 'updated_at']
+
+    def validate_venue(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_affected_production(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Affected production')
+
+    def validate_reported_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Reported by')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+class MaintenanceScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MaintenanceSchedule
+        fields = [
+            'id', 'title', 'category', 'venue', 'frequency',
+            'assigned_to', 'last_completed_date', 'next_due_date',
+            'is_active', 'instructions', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_venue(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+class InspectionRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InspectionRecord
+        fields = [
+            'id', 'inspection_type', 'venue', 'inspection_date',
+            'inspector_name', 'inspector_company', 'passed',
+            'certificate_number', 'expiry_date', 'findings',
+            'corrective_actions_required', 'next_inspection_date', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+
+class VenueDowntimeSerializer(serializers.ModelSerializer):
+    downtime_hours = serializers.ReadOnlyField()
+
+    class Meta:
+        model = VenueDowntime
+        fields = [
+            'id', 'venue', 'reason', 'start_datetime', 'end_datetime',
+            'is_resolved', 'production_impact', 'ticket',
+            'downtime_hours', 'created_at',
+        ]
+        read_only_fields = ['id', 'downtime_hours', 'created_at']
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+    def validate_ticket(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Ticket')
+
+
+# ── Audience Complaints & Accessibility ───────────────────────────────────────
+
+class AudienceComplaintSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AudienceComplaint
+        fields = [
+            'id', 'reference_number', 'operating_context', 'complaint_date',
+            'complainant_name', 'complainant_email', 'complainant_phone',
+            'is_anonymous', 'category', 'description', 'status',
+            'assigned_to', 'resolution', 'resolved_date',
+            'requires_follow_up', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'reference_number', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+class AccessibilityRequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccessibilityRequirement
+        fields = [
+            'id', 'operating_context', 'performance_date', 'requirement_type',
+            'patron_name', 'patron_contact', 'details', 'is_confirmed',
+            'assigned_to', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+class LateSeatingPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LateSeatingPolicy
+        fields = [
+            'id', 'operating_context', 'cutoff_minutes', 'holding_area',
+            'policy_description', 'exceptions_allowed',
+            'exception_approval_role', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')

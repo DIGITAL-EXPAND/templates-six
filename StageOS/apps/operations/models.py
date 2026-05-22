@@ -291,3 +291,58 @@ class SafetyComplianceRecord(TenantOwnedModel):
 
     class Meta:
         ordering = ['compliance_type', 'expiry_date']
+
+
+# ── Union Agreements ──────────────────────────────────────────────────────────
+
+class UnionBody(models.TextChoices):
+    SAGA = 'saga', 'SAGA (S.A. Guild of Actors)'
+    MUSA = 'musa', 'MUSA (Musicians Union of SA)'
+    EQUITY = 'equity', 'Equity'
+    SAEW = 'saew', 'SAEW (S.A. Entertainment Workers)'
+    SATAWU = 'satawu', 'SATAWU (Transport & Allied Workers)'
+    OTHER = 'other', 'Other Union'
+
+class UnionAgreement(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    union = models.CharField(max_length=20, choices=UnionBody.choices)
+    agreement_name = models.CharField(max_length=255)
+    effective_date = models.DateField()
+    expiry_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    minimum_call_hours = models.DecimalField(max_digits=4, decimal_places=1, default=4, help_text='Minimum call length in hours')
+    overtime_threshold_hours = models.DecimalField(max_digits=4, decimal_places=1, default=8)
+    overtime_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.5)
+    meal_break_provision_hours = models.DecimalField(max_digits=4, decimal_places=1, default=5, help_text='Meal break required after X hours')
+    turnaround_hours = models.DecimalField(max_digits=4, decimal_places=1, default=10, help_text='Minimum rest between calls')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class UnionCallRate(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agreement = models.ForeignKey(UnionAgreement, on_delete=models.CASCADE, related_name='rates')
+    role_category = models.CharField(max_length=100, help_text='e.g. Principal Actor, Swing, Ensemble, Stage Manager')
+    rate_type = models.CharField(max_length=20, choices=[
+        ('daily', 'Daily Rate'), ('weekly', 'Weekly Rate'), ('per_performance', 'Per Performance'),
+        ('rehearsal', 'Rehearsal Rate'), ('recording', 'Recording Rate'),
+    ])
+    minimum_rate = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='ZAR')
+    effective_date = models.DateField()
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['role_category', 'rate_type']
+
+class CrewCallUnionCheck(TenantOwnedModel):
+    """Records union compliance check result for a staff/crew call."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    staff_call = models.ForeignKey('StaffCall', on_delete=models.CASCADE, related_name='union_checks')
+    union_agreement = models.ForeignKey(UnionAgreement, on_delete=models.SET_NULL, null=True, blank=True)
+    applicable_rate = models.ForeignKey(UnionCallRate, on_delete=models.SET_NULL, null=True, blank=True)
+    scheduled_hours = models.DecimalField(max_digits=5, decimal_places=2)
+    minimum_call_met = models.BooleanField(default=True)
+    turnaround_met = models.BooleanField(default=True)
+    estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    compliance_notes = models.TextField(blank=True)
+    checked_at = models.DateTimeField(auto_now_add=True)

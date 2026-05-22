@@ -159,3 +159,59 @@ class SafetyComplianceRecordSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Responsible person')
+
+
+# ── Union Agreements ──────────────────────────────────────────────────────────
+
+from .models import UnionAgreement, UnionCallRate, CrewCallUnionCheck  # noqa: E402
+
+
+class UnionCallRateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UnionCallRate
+        fields = [
+            'id', 'agreement', 'role_category', 'rate_type', 'minimum_rate',
+            'currency', 'effective_date', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_agreement(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Agreement')
+
+
+class UnionAgreementSerializer(serializers.ModelSerializer):
+    rates = UnionCallRateSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = UnionAgreement
+        fields = [
+            'id', 'union', 'agreement_name', 'effective_date', 'expiry_date',
+            'is_active', 'minimum_call_hours', 'overtime_threshold_hours',
+            'overtime_multiplier', 'meal_break_provision_hours', 'turnaround_hours',
+            'notes', 'created_at', 'rates',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class CrewCallUnionCheckSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CrewCallUnionCheck
+        fields = [
+            'id', 'staff_call', 'union_agreement', 'applicable_rate',
+            'scheduled_hours', 'minimum_call_met', 'turnaround_met',
+            'estimated_cost', 'compliance_notes', 'checked_at',
+        ]
+        read_only_fields = ['id', 'checked_at']
+
+    def validate_staff_call(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Staff call')
+
+    def validate_union_agreement(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Union agreement')
+
+    def validate_applicable_rate(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Applicable rate')

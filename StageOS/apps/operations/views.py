@@ -173,3 +173,83 @@ class SafetyComplianceRecordViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Union Agreements ──────────────────────────────────────────────────────────
+
+from .models import UnionAgreement, UnionCallRate, CrewCallUnionCheck  # noqa: E402
+from .serializers import (  # noqa: E402
+    UnionAgreementSerializer, UnionCallRateSerializer, CrewCallUnionCheckSerializer,
+)
+
+
+class UnionAgreementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = UnionAgreement.objects.prefetch_related('rates')
+    serializer_class = UnionAgreementSerializer
+    filterset_fields = ['union', 'is_active']
+    search_fields = ['agreement_name']
+    ordering = ['union', 'agreement_name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def check_call(self, request, pk=None):
+        """Check compliance of a call against this union agreement."""
+        agreement = self.get_object()
+        hours = float(request.data.get('hours', 0))
+        role_category = request.data.get('role_category', '')
+
+        minimum_call_met = hours >= float(agreement.minimum_call_hours)
+
+        # Find applicable rate
+        applicable_rate = UnionCallRate.objects.filter(
+            agreement=agreement,
+            role_category__iexact=role_category,
+            organisation_id=request.user.organisation_id,
+        ).first()
+
+        estimated_cost = 0
+        if applicable_rate:
+            estimated_cost = float(applicable_rate.minimum_rate)
+            if hours > float(agreement.overtime_threshold_hours):
+                overtime_hours = hours - float(agreement.overtime_threshold_hours)
+                hourly = float(applicable_rate.minimum_rate) / 8
+                estimated_cost += overtime_hours * hourly * float(agreement.overtime_multiplier)
+
+        return Response({
+            'agreement_id': str(agreement.id),
+            'agreement_name': agreement.agreement_name,
+            'union': agreement.union,
+            'hours_requested': hours,
+            'minimum_call_hours': float(agreement.minimum_call_hours),
+            'minimum_call_met': minimum_call_met,
+            'turnaround_hours': float(agreement.turnaround_hours),
+            'role_category': role_category,
+            'applicable_rate': UnionCallRateSerializer(applicable_rate).data if applicable_rate else None,
+            'estimated_cost': round(estimated_cost, 2),
+            'compliance_issues': [] if minimum_call_met else [
+                f'Call of {hours}h is below the minimum {agreement.minimum_call_hours}h call.'
+            ],
+        })
+
+
+class UnionCallRateViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = UnionCallRate.objects.select_related('agreement')
+    serializer_class = UnionCallRateSerializer
+    filterset_fields = ['agreement', 'rate_type']
+    search_fields = ['role_category']
+    ordering = ['agreement', 'role_category', 'rate_type']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class CrewCallUnionCheckViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CrewCallUnionCheck.objects.select_related('staff_call', 'union_agreement', 'applicable_rate')
+    serializer_class = CrewCallUnionCheckSerializer
+    filterset_fields = ['staff_call', 'union_agreement', 'minimum_call_met', 'turnaround_met']
+    ordering = ['-checked_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

@@ -3,6 +3,8 @@ from .views import (
     CalendarIssueViewSet, IntakeRequestViewSet, IntakeReviewViewSet, ProducerAssignmentViewSet,
     VenueHoldViewSet, CalendarSlotViewSet, SeasonViewSet, ShowViewSet, PerformanceViewSet,
     ProductionLicenceViewSet, ProductionJournalEntryViewSet,
+    SetlistWorkViewSet, CoProducerViewSet, CoProductionSettlementViewSet,
+    CoProductionSettlementLineViewSet,
 )
 
 router = DefaultRouter()
@@ -17,4 +19,8 @@ router.register('shows', ShowViewSet, basename='show')
 router.register('performances', PerformanceViewSet, basename='performance')
 router.register('production-licences', ProductionLicenceViewSet, basename='production-licence')
 router.register('journal', ProductionJournalEntryViewSet, basename='production-journal')
+router.register('setlist-works', SetlistWorkViewSet, basename='setlist-work')
+router.register('co-producers', CoProducerViewSet, basename='co-producer')
+router.register('co-production-settlements', CoProductionSettlementViewSet, basename='co-production-settlement')
+router.register('co-production-settlement-lines', CoProductionSettlementLineViewSet, basename='co-production-settlement-line')
 urlpatterns = router.urls

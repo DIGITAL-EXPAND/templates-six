@@ -8,6 +8,7 @@ from .models import (
     CalendarIssue, CalendarIssueStatus, IntakeRequest, IntakeRequestStatus,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
     Season, Show, Performance, ProductionLicence,
+    SetlistWork, CoProducer, CoProductionSettlement, CoProductionSettlementLine,
 )
 from .serializers import (
     CalendarIssueActionSerializer, CalendarIssueSerializer,
@@ -16,6 +17,8 @@ from .serializers import (
     VenueHoldSerializer, CalendarSlotSerializer,
     SeasonSerializer, ShowSerializer, PerformanceSerializer,
     ProductionLicenceSerializer,
+    SetlistWorkSerializer, CoProducerSerializer,
+    CoProductionSettlementSerializer, CoProductionSettlementLineSerializer,
 )
 from .services import (
     assign_producer, change_calendar_issue_status, convert_intake_to_context,
@@ -536,3 +539,97 @@ class ProductionJournalEntryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             organisation_id=self.request.user.organisation_id,
             author=self.request.user,
         )
+
+
+# ── Setlist Works ─────────────────────────────────────────────────────────────
+
+class SetlistWorkViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = SetlistWork.objects.select_related('performance')
+    serializer_class = SetlistWorkSerializer
+    filterset_fields = ['performance', 'licensing_body', 'is_public_domain', 'is_original_work']
+    search_fields = ['title', 'composer', 'arranger', 'publisher']
+    ordering = ['order', 'title']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        performance = self.request.query_params.get('performance')
+        if performance:
+            qs = qs.filter(performance_id=performance)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=False, methods=['get'])
+    def samro_report(self, request):
+        """Generate SAMRO-style report of all works performed in a date range."""
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        qs = self.get_queryset().filter(is_public_domain=False)
+        if date_from:
+            qs = qs.filter(performance__performance_date__gte=date_from)
+        if date_to:
+            qs = qs.filter(performance__performance_date__lte=date_to)
+        data = []
+        for work in qs:
+            data.append({
+                'performance_date': str(work.performance.performance_date),
+                'venue': work.performance.venue_name if hasattr(work.performance, 'venue_name') else '',
+                'title': work.title,
+                'composer': work.composer,
+                'publisher': work.publisher,
+                'isrc': work.isrc_code,
+                'iswc': work.iswc_code,
+                'duration_minutes': float(work.duration_minutes),
+                'licensing_body': work.licensing_body,
+            })
+        return Response({'works': data, 'total_works': len(data)})
+
+
+# ── Co-Production ─────────────────────────────────────────────────────────────
+
+class CoProducerViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CoProducer.objects.select_related('operating_context')
+    serializer_class = CoProducerSerializer
+    filterset_fields = ['operating_context', 'role']
+    search_fields = ['partner_name', 'contact_person', 'email']
+    ordering = ['partner_name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class CoProductionSettlementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CoProductionSettlement.objects.select_related('operating_context').prefetch_related('lines')
+    serializer_class = CoProductionSettlementSerializer
+    filterset_fields = ['operating_context', 'status']
+    ordering = ['-settlement_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def agree(self, request, pk=None):
+        """Set settlement status to agreed."""
+        settlement = self.get_object()
+        settlement.status = 'agreed'
+        settlement.save(update_fields=['status'])
+        return Response(CoProductionSettlementSerializer(settlement, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        """Set settlement status to paid."""
+        settlement = self.get_object()
+        settlement.status = 'paid'
+        settlement.save(update_fields=['status'])
+        return Response(CoProductionSettlementSerializer(settlement, context={'request': request}).data)
+
+
+class CoProductionSettlementLineViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CoProductionSettlementLine.objects.select_related('settlement', 'co_producer')
+    serializer_class = CoProductionSettlementLineSerializer
+    filterset_fields = ['settlement', 'co_producer', 'is_paid']
+    ordering = ['settlement']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

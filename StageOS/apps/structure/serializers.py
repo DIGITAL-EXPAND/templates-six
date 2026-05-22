@@ -15,6 +15,9 @@ from .models import (
     VenueCapacityConfig,
     VenueRentalEnquiry,
     VenueRentalQuote,
+    RentalBooking,
+    RentalInvoice,
+    ResidentCompany,
 )
 
 
@@ -264,3 +267,53 @@ class VenueRentalEnquirySerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+# ── Rental Booking & Invoice ──────────────────────────────────────────────────
+
+class RentalBookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RentalBooking
+        fields = [
+            'id', 'enquiry', 'quote', 'booking_number', 'confirmed_date', 'status',
+            'contract_signed', 'contract_signed_date', 'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'booking_number', 'created_at', 'updated_at']
+
+    def validate_enquiry(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Enquiry')
+
+    def validate_quote(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Quote')
+
+
+class RentalInvoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RentalInvoice
+        fields = [
+            'id', 'booking', 'invoice_number', 'invoice_type', 'invoice_date',
+            'due_date', 'subtotal', 'vat_amount', 'total', 'is_paid',
+            'paid_date', 'paid_amount', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'invoice_number', 'created_at']
+
+    def validate_booking(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Booking')
+
+
+# ── Resident Companies ────────────────────────────────────────────────────────
+
+class ResidentCompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResidentCompany
+        fields = [
+            'id', 'name', 'company_type', 'status', 'venue', 'artistic_director',
+            'contact_email', 'contact_phone', 'residency_start_date', 'residency_end_date',
+            'rehearsal_space_allocation', 'performance_slots_per_year',
+            'annual_subsidy', 'rental_rate_discount_pct', 'agreement_reference',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_venue(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Venue')

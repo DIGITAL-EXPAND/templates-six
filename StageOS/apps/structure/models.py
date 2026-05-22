@@ -452,3 +452,100 @@ class VenueRentalQuote(TenantOwnedModel):
     @property
     def deposit_amount(self):
         return self.total_inc_vat * (self.deposit_percentage / 100)
+
+
+class RentalBooking(TenantOwnedModel):
+    """Confirmed rental booking — created when a quote is accepted."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enquiry = models.OneToOneField(VenueRentalEnquiry, on_delete=models.CASCADE, related_name='booking')
+    quote = models.OneToOneField(VenueRentalQuote, on_delete=models.CASCADE, related_name='booking')
+    booking_number = models.CharField(max_length=50, blank=True)
+    confirmed_date = models.DateField()
+    status = models.CharField(max_length=20, choices=[
+        ('confirmed', 'Confirmed'),
+        ('setup_in_progress', 'Setup in Progress'),
+        ('event_in_progress', 'Event in Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ], default='confirmed')
+    contract_signed = models.BooleanField(default=False)
+    contract_signed_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.booking_number:
+            import datetime
+            year = datetime.date.today().year
+            count = RentalBooking.objects.filter(organisation=self.organisation).count() + 1
+            self.booking_number = f'BK-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+
+class RentalInvoice(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.ForeignKey(RentalBooking, on_delete=models.CASCADE, related_name='invoices')
+    invoice_number = models.CharField(max_length=50, blank=True)
+    invoice_type = models.CharField(max_length=20, choices=[
+        ('deposit', 'Deposit Invoice'),
+        ('balance', 'Balance Invoice'),
+        ('full', 'Full Invoice'),
+        ('credit_note', 'Credit Note'),
+    ])
+    invoice_date = models.DateField()
+    due_date = models.DateField()
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    vat_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    is_paid = models.BooleanField(default=False)
+    paid_date = models.DateField(null=True, blank=True)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            import datetime
+            year = datetime.date.today().year
+            count = RentalInvoice.objects.filter(organisation=self.organisation).count() + 1
+            self.invoice_number = f'INV-{year}-{count:04d}'
+        super().save(*args, **kwargs)
+
+
+# ── Resident Companies ────────────────────────────────────────────────────────
+
+class ResidencyStatus(models.TextChoices):
+    ACTIVE = 'active', 'Active Residency'
+    COMPLETED = 'completed', 'Completed'
+    SUSPENDED = 'suspended', 'Suspended'
+    TERMINATED = 'terminated', 'Terminated'
+    PROSPECTIVE = 'prospective', 'Prospective / Negotiating'
+
+class ResidentCompany(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    company_type = models.CharField(max_length=50, blank=True, choices=[
+        ('theatre_company', 'Theatre Company'),
+        ('dance_company', 'Dance Company'),
+        ('music_ensemble', 'Music Ensemble'),
+        ('opera_company', 'Opera Company'),
+        ('youth_company', 'Youth Company'),
+        ('community_company', 'Community Company'),
+        ('other', 'Other'),
+    ])
+    status = models.CharField(max_length=20, choices=ResidencyStatus.choices, default=ResidencyStatus.ACTIVE)
+    venue = models.ForeignKey('Venue', on_delete=models.PROTECT, related_name='resident_companies')
+    artistic_director = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    residency_start_date = models.DateField()
+    residency_end_date = models.DateField(null=True, blank=True)
+    rehearsal_space_allocation = models.TextField(blank=True, help_text='Spaces and hours allocated per week')
+    performance_slots_per_year = models.PositiveIntegerField(default=0)
+    annual_subsidy = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    rental_rate_discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    agreement_reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

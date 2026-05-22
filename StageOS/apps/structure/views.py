@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from common.views import TenantScopedMixin
+import datetime
 from .models import (
     ApprovalPolicy,
     Department,
@@ -17,6 +18,9 @@ from .models import (
     VenueCapacityConfig,
     VenueRentalEnquiry,
     VenueRentalQuote,
+    RentalBooking,
+    RentalInvoice,
+    ResidentCompany,
 )
 from .serializers import (
     ApprovalPolicySerializer,
@@ -33,6 +37,9 @@ from .serializers import (
     VenueSerializer,
     VenueRentalEnquirySerializer,
     VenueRentalQuoteSerializer,
+    RentalBookingSerializer,
+    RentalInvoiceSerializer,
+    ResidentCompanySerializer,
 )
 
 

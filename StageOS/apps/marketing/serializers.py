@@ -2,7 +2,7 @@ from rest_framework import serializers
 from common.serializers import (
     check_tenant_fk, validate_unique_context, ProtectedFieldsMixin, require_non_negative,
 )
-from .models import Campaign, CampaignDeliverable, SocialPost, AudienceReport
+from .models import Campaign, CampaignDeliverable, SocialPost, AudienceReport, MediaContact, NewsletterCampaign, CIComplianceCheck
 
 
 class CampaignSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
@@ -76,3 +76,55 @@ class AudienceReportSerializer(serializers.ModelSerializer):
     def validate_operating_context(self, value):
         check_tenant_fk(value, self.context.get('request'), 'Operating context')
         return validate_unique_context(self, value)
+
+
+class MediaContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MediaContact
+        fields = [
+            'id', 'name', 'outlet', 'role', 'email', 'phone',
+            'coverage_type', 'is_active', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class NewsletterCampaignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsletterCampaign
+        fields = [
+            'id', 'subject', 'status', 'audience_description', 'body_text',
+            'scheduled_send_date', 'sent_date', 'recipient_count', 'open_rate',
+            'click_rate', 'linked_productions', 'prepared_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_prepared_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Prepared by')
+
+
+class CIComplianceCheckSerializer(ProtectedFieldsMixin, serializers.ModelSerializer):
+    protected_fields = ('status',)
+
+    class Meta:
+        model = CIComplianceCheck
+        fields = [
+            'id', 'operating_context', 'material_type', 'status',
+            'submitted_by', 'reviewed_by', 'submission_date', 'review_date',
+            'feedback', 'version', 'created_at',
+        ]
+        read_only_fields = ['id', 'status', 'created_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+    def validate_submitted_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Submitted by')
+
+    def validate_reviewed_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Reviewed by')

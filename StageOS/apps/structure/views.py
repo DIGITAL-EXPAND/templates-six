@@ -21,6 +21,7 @@ from .models import (
     RentalBooking,
     RentalInvoice,
     ResidentCompany,
+    VenueHoldExpiry,
 )
 from .serializers import (
     ApprovalPolicySerializer,
@@ -40,6 +41,7 @@ from .serializers import (
     RentalBookingSerializer,
     RentalInvoiceSerializer,
     ResidentCompanySerializer,
+    VenueHoldExpirySerializer,
 )
 
 
@@ -129,6 +131,27 @@ class VenueRentalEnquiryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         enquiry.save(update_fields=['status'])
         return Response(VenueRentalQuoteSerializer(quote, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'])
+    def convert_to_production(self, request, pk=None):
+        """Convert a confirmed rental enquiry into an OperatingContext (production)."""
+        from contexts.models import OperatingContext
+        enquiry = self.get_object()
+        if enquiry.status not in ['quote_accepted', 'agreement_signed', 'deposit_received', 'confirmed']:
+            return Response({'error': 'Enquiry must be at quote_accepted or later stage to convert.'}, status=400)
+        # Create operating context
+        ctx = OperatingContext.objects.create(
+            organisation=enquiry.organisation,
+            title=enquiry.event_name,
+            context_type='external_hire',
+            start_date=enquiry.event_date,
+            end_date=enquiry.event_end_date or enquiry.event_date,
+            status='approved',
+            description=f'Created from rental enquiry {enquiry.reference_number}',
+        )
+        enquiry.status = 'confirmed'
+        enquiry.save()
+        return Response({'production_id': str(ctx.id), 'title': ctx.title, 'message': 'Production created successfully.'})
+
 
 class VenueRentalQuoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = VenueRentalQuote.objects.select_related('enquiry')
@@ -203,3 +226,28 @@ class ResidentCompanyViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Venue Hold Expiry ─────────────────────────────────────────────────────────
+
+class VenueHoldExpiryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = VenueHoldExpiry.objects.select_related('enquiry')
+    serializer_class = VenueHoldExpirySerializer
+    filterset_fields = ['enquiry', 'is_expired', 'reminder_sent']
+    ordering = ['hold_expiry_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def expire(self, request, pk=None):
+        """Mark the hold as expired and cancel the associated enquiry."""
+        from django.utils import timezone
+        hold_expiry = self.get_object()
+        hold_expiry.is_expired = True
+        hold_expiry.expired_at = timezone.now()
+        hold_expiry.save(update_fields=['is_expired', 'expired_at'])
+        enquiry = hold_expiry.enquiry
+        enquiry.status = 'cancelled'
+        enquiry.save(update_fields=['status'])
+        return Response(VenueHoldExpirySerializer(hold_expiry, context={'request': request}).data)

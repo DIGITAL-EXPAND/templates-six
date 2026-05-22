@@ -18,6 +18,7 @@ from .models import (
     RentalBooking,
     RentalInvoice,
     ResidentCompany,
+    VenueHoldExpiry,
 )
 
 
@@ -317,3 +318,18 @@ class ResidentCompanySerializer(serializers.ModelSerializer):
 
     def validate_venue(self, value):
         return check_tenant_fk(value, self.context.get('request'), 'Venue')
+
+
+# ── Venue Hold Expiry ─────────────────────────────────────────────────────────
+
+class VenueHoldExpirySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VenueHoldExpiry
+        fields = [
+            'id', 'enquiry', 'hold_expiry_date', 'reminder_sent', 'reminder_sent_date',
+            'is_expired', 'expired_at', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'is_expired', 'expired_at', 'created_at']
+
+    def validate_enquiry(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Enquiry')

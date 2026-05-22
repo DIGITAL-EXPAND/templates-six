@@ -5,6 +5,7 @@ from .views import (
     ProductionLicenceViewSet, ProductionJournalEntryViewSet,
     SetlistWorkViewSet, CoProducerViewSet, CoProductionSettlementViewSet,
     CoProductionSettlementLineViewSet,
+    TouringProductionViewSet, TouringVenueDateViewSet, RecurringProductionViewSet,
 )
 
 router = DefaultRouter()
@@ -23,4 +24,7 @@ router.register('setlist-works', SetlistWorkViewSet, basename='setlist-work')
 router.register('co-producers', CoProducerViewSet, basename='co-producer')
 router.register('co-production-settlements', CoProductionSettlementViewSet, basename='co-production-settlement')
 router.register('co-production-settlement-lines', CoProductionSettlementLineViewSet, basename='co-production-settlement-line')
+router.register('touring-productions', TouringProductionViewSet, basename='touring-production')
+router.register('touring-venue-dates', TouringVenueDateViewSet, basename='touring-venue-date')
+router.register('recurring-productions', RecurringProductionViewSet, basename='recurring-production')
 urlpatterns = router.urls

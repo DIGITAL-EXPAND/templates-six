@@ -6,6 +6,7 @@ from .models import (
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
     Season, Show, Performance, ProductionLicence,
     SetlistWork, CoProducer, CoProductionSettlement, CoProductionSettlementLine,
+    TouringProduction, TouringVenueDate, RecurringProduction,
 )
 
 
@@ -345,3 +346,44 @@ class ProductionJournalEntrySerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Author')
+
+
+class TouringVenueDateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TouringVenueDate
+        fields = [
+            'id', 'touring_production', 'venue_name', 'city', 'performance_date',
+            'load_in_date', 'load_out_date', 'fee', 'status', 'notes',
+        ]
+        read_only_fields = ['id']
+
+
+class TouringProductionSerializer(serializers.ModelSerializer):
+    venues = TouringVenueDateSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = TouringProduction
+        fields = [
+            'id', 'operating_context', 'is_outgoing', 'tour_manager',
+            'transport_provider', 'accommodation_notes', 'per_diem_rate',
+            'technical_advance_date', 'notes', 'created_at', 'venues',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+
+class RecurringProductionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecurringProduction
+        fields = [
+            'id', 'name', 'description', 'frequency', 'base_operating_context',
+            'is_active', 'next_occurrence_date', 'auto_create', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_base_operating_context(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Base operating context')

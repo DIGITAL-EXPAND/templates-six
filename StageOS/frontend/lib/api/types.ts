@@ -2459,6 +2459,229 @@ export interface UnionCallRate {
   effective_date: string;
 }
 
+// Gap-fill types A
+export interface MaintenanceTicket {
+  id: string;
+  ticket_number: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  status: string;
+  venue: string | null;
+  location_detail: string;
+  is_production_impacting: boolean;
+  affected_production: string | null;
+  reported_by: string | null;
+  assigned_to: string | null;
+  target_resolution_date: string | null;
+  resolved_date: string | null;
+  resolution_notes: string;
+  cost_estimate: string | null;
+  actual_cost: string | null;
+  contractor_name: string;
+  created_at: string;
+}
+
+export interface MaintenanceSchedule {
+  id: string;
+  title: string;
+  category: string;
+  frequency: string;
+  last_completed_date: string | null;
+  next_due_date: string | null;
+  is_active: boolean;
+  instructions: string;
+}
+
+export interface InspectionRecord {
+  id: string;
+  inspection_type: string;
+  venue: string;
+  inspection_date: string;
+  inspector_name: string;
+  passed: boolean;
+  certificate_number: string;
+  expiry_date: string | null;
+  findings: string;
+  next_inspection_date: string | null;
+}
+
+export interface VenueDowntime {
+  id: string;
+  venue: string;
+  reason: string;
+  start_datetime: string;
+  end_datetime: string | null;
+  is_resolved: boolean;
+  production_impact: string;
+  downtime_hours: number | null;
+}
+
+export interface CueSheet {
+  id: string;
+  operating_context: string;
+  version: number;
+  title: string;
+  department: string;
+  is_master: boolean;
+  notes: string;
+}
+
+export interface CueLine {
+  id: string;
+  cue_sheet: string;
+  cue_number: string;
+  page_ref: string;
+  action: string;
+  standby_note: string;
+  follow_on: boolean;
+  order: number;
+}
+
+export interface PropsItem {
+  id: string;
+  name: string;
+  category: string;
+  condition: string;
+  storage_location: string;
+  is_hired: boolean;
+  hire_company: string;
+  hire_cost: string | null;
+  hire_return_date: string | null;
+  current_production: string | null;
+  is_available: boolean;
+  purchase_cost: string | null;
+}
+
+export interface WardrobeItem {
+  id: string;
+  name: string;
+  category: string;
+  character: string;
+  size: string;
+  condition: string;
+  is_hired: boolean;
+  current_production: string | null;
+  assigned_to_performer: string;
+  storage_location: string;
+  cleaning_required: boolean;
+}
+
+export interface AudienceComplaint {
+  id: string;
+  reference_number: string;
+  operating_context: string | null;
+  complaint_date: string;
+  complainant_name: string;
+  is_anonymous: boolean;
+  category: string;
+  description: string;
+  status: string;
+  resolution: string;
+  resolved_date: string | null;
+}
+
+export interface AccessibilityRequirement {
+  id: string;
+  operating_context: string;
+  performance_date: string | null;
+  requirement_type: string;
+  patron_name: string;
+  details: string;
+  is_confirmed: boolean;
+}
+
+export interface LateSeatingPolicy {
+  id: string;
+  operating_context: string;
+  cutoff_minutes: number;
+  holding_area: string;
+  policy_description: string;
+  exceptions_allowed: boolean;
+}
+
+// Gap-fill types B
+export interface MediaContact {
+  id: string;
+  name: string;
+  outlet: string;
+  role: string;
+  email: string;
+  phone: string;
+  coverage_type: string;
+  is_active: boolean;
+}
+
+export interface NewsletterCampaign {
+  id: string;
+  subject: string;
+  status: string;
+  audience_description: string;
+  body_text: string;
+  scheduled_send_date: string | null;
+  sent_date: string | null;
+  recipient_count: number;
+  open_rate: string;
+  click_rate: string;
+}
+
+export interface CIComplianceCheck {
+  id: string;
+  operating_context: string;
+  material_type: string;
+  status: string;
+  submitted_by: string | null;
+  submission_date: string;
+  review_date: string | null;
+  feedback: string;
+  version: number;
+}
+
+export interface TouringProduction {
+  id: string;
+  operating_context: string;
+  is_outgoing: boolean;
+  tour_manager: string;
+  transport_provider: string;
+  per_diem_rate: string | null;
+  technical_advance_date: string | null;
+  notes: string;
+}
+
+export interface TouringVenueDate {
+  id: string;
+  touring_production: string;
+  venue_name: string;
+  city: string;
+  performance_date: string;
+  load_in_date: string | null;
+  load_out_date: string | null;
+  fee: string | null;
+  status: string;
+}
+
+export interface RecurringProduction {
+  id: string;
+  name: string;
+  frequency: string;
+  is_active: boolean;
+  next_occurrence_date: string | null;
+  auto_create: boolean;
+  description: string;
+}
+
+export interface ExpiryAlert {
+  id: string;
+  alert_type: string;
+  reference_description: string;
+  expiry_date: string;
+  days_warning: number;
+  is_acknowledged: boolean;
+  acknowledged_at: string | null;
+  auto_created: boolean;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

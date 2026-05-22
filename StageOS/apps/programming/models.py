@@ -547,3 +547,56 @@ class CoProductionSettlementLine(TenantOwnedModel):
     is_paid = models.BooleanField(default=False)
     payment_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
+
+
+# ── Touring Productions ───────────────────────────────────────────────────────
+
+class TouringProduction(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.OneToOneField('contexts.OperatingContext', on_delete=models.CASCADE, related_name='touring_info')
+    is_outgoing = models.BooleanField(default=True, help_text='True = we are touring out; False = incoming touring production')
+    tour_manager = models.CharField(max_length=255, blank=True)
+    transport_provider = models.CharField(max_length=255, blank=True)
+    accommodation_notes = models.TextField(blank=True)
+    per_diem_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    technical_advance_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class TouringVenueDate(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    touring_production = models.ForeignKey(TouringProduction, on_delete=models.CASCADE, related_name='venues')
+    venue_name = models.CharField(max_length=255)
+    city = models.CharField(max_length=100)
+    performance_date = models.DateField()
+    load_in_date = models.DateField(null=True, blank=True)
+    load_out_date = models.DateField(null=True, blank=True)
+    fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=[
+        ('confirmed', 'Confirmed'), ('tentative', 'Tentative'), ('cancelled', 'Cancelled'),
+    ], default='tentative')
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['performance_date']
+
+
+# ── Recurring Productions ─────────────────────────────────────────────────────
+
+class RecurrenceFrequency(models.TextChoices):
+    WEEKLY = 'weekly', 'Weekly'
+    FORTNIGHTLY = 'fortnightly', 'Fortnightly'
+    MONTHLY = 'monthly', 'Monthly'
+    ANNUALLY = 'annually', 'Annually (same season each year)'
+
+class RecurringProduction(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    frequency = models.CharField(max_length=15, choices=RecurrenceFrequency.choices)
+    base_operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.SET_NULL, null=True, blank=True, related_name='recurrence_template', help_text='The original production this recurs from')
+    is_active = models.BooleanField(default=True)
+    next_occurrence_date = models.DateField(null=True, blank=True)
+    auto_create = models.BooleanField(default=False, help_text='Auto-create new OperatingContext on each cycle')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

@@ -549,3 +549,18 @@ class ResidentCompany(TenantOwnedModel):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+# ── Venue Hold Expiry ─────────────────────────────────────────────────────────
+
+class VenueHoldExpiry(TenantOwnedModel):
+    """Tracks tentative holds with auto-expiry dates."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enquiry = models.OneToOneField(VenueRentalEnquiry, on_delete=models.CASCADE, related_name='hold_expiry')
+    hold_expiry_date = models.DateField()
+    reminder_sent = models.BooleanField(default=False)
+    reminder_sent_date = models.DateField(null=True, blank=True)
+    is_expired = models.BooleanField(default=False)
+    expired_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

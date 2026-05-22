@@ -6,10 +6,11 @@ from common.views import TenantScopedMixin
 from common.permissions import UserRoles, is_admin_user, user_type
 from apps.documents.models import Document
 from apps.structure.models import UserDepartmentMembership
-from .models import Campaign, CampaignDeliverable, SocialPost, AudienceReport
+from .models import Campaign, CampaignDeliverable, SocialPost, AudienceReport, MediaContact, NewsletterCampaign, CIComplianceCheck
 from .serializers import (
     CampaignSerializer, CampaignDeliverableSerializer,
     SocialPostSerializer, AudienceReportSerializer,
+    MediaContactSerializer, NewsletterCampaignSerializer, CIComplianceCheckSerializer,
 )
 from .services import set_campaign_status, complete_deliverable
 
@@ -110,3 +111,58 @@ class AudienceReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     serializer_class = AudienceReportSerializer
     filterset_fields = ['operating_context', 'is_finalised']
     ordering = ['-created_at']
+
+
+class MediaContactViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = MediaContact.objects.all()
+    serializer_class = MediaContactSerializer
+    filterset_fields = ['coverage_type', 'is_active']
+    search_fields = ['name', 'outlet', 'role', 'email']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class NewsletterCampaignViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = NewsletterCampaign.objects.select_related('prepared_by').prefetch_related('linked_productions')
+    serializer_class = NewsletterCampaignSerializer
+    filterset_fields = ['status']
+    search_fields = ['subject', 'audience_description']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class CIComplianceCheckViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = CIComplianceCheck.objects.select_related('operating_context', 'submitted_by', 'reviewed_by')
+    serializer_class = CIComplianceCheckSerializer
+    filterset_fields = ['operating_context', 'material_type', 'status']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        from django.utils import timezone
+        check = self.get_object()
+        check.status = 'approved'
+        check.reviewed_by = request.user
+        check.review_date = timezone.now().date()
+        check.save(update_fields=['status', 'reviewed_by', 'review_date'])
+        return Response(CIComplianceCheckSerializer(check, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        from django.utils import timezone
+        check = self.get_object()
+        check.status = 'rejected'
+        check.reviewed_by = request.user
+        check.review_date = timezone.now().date()
+        feedback = request.data.get('feedback', '')
+        if feedback:
+            check.feedback = feedback
+        check.save(update_fields=['status', 'reviewed_by', 'review_date', 'feedback'])
+        return Response(CIComplianceCheckSerializer(check, context={'request': request}).data)

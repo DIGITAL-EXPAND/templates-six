@@ -175,3 +175,65 @@ class AudienceReport(TenantOwnedModel):
 
     def __str__(self):
         return f'Audience Report: {self.operating_context}'
+
+
+class MediaContact(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    outlet = models.CharField(max_length=255, help_text='Publication, station or platform name')
+    role = models.CharField(max_length=100, blank=True, help_text='e.g. Arts Editor, Journalist, Blogger')
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    coverage_type = models.CharField(max_length=20, choices=[
+        ('print', 'Print'), ('online', 'Online'), ('radio', 'Radio'),
+        ('tv', 'Television'), ('podcast', 'Podcast'), ('social', 'Social Media'),
+    ], blank=True)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class NewsletterStatus(models.TextChoices):
+    DRAFT = 'draft', 'Draft'
+    READY = 'ready', 'Ready to Send'
+    SENT = 'sent', 'Sent'
+    CANCELLED = 'cancelled', 'Cancelled'
+
+
+class NewsletterCampaign(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subject = models.CharField(max_length=255)
+    status = models.CharField(max_length=15, choices=NewsletterStatus.choices, default=NewsletterStatus.DRAFT)
+    audience_description = models.CharField(max_length=255, blank=True)
+    body_text = models.TextField(blank=True)
+    scheduled_send_date = models.DateField(null=True, blank=True)
+    sent_date = models.DateField(null=True, blank=True)
+    recipient_count = models.PositiveIntegerField(default=0)
+    open_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    click_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    linked_productions = models.ManyToManyField('contexts.OperatingContext', blank=True, related_name='newsletters')
+    prepared_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='newsletters')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class CIComplianceCheck(TenantOwnedModel):
+    """Corporate Identity compliance check per production's marketing materials."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.CASCADE, related_name='ci_checks')
+    material_type = models.CharField(max_length=30, choices=[
+        ('poster', 'Poster'), ('flyer', 'Flyer'), ('social_graphic', 'Social Media Graphic'),
+        ('programme', 'Programme'), ('banner', 'Banner / Outdoor'),
+        ('email_header', 'Email Header'), ('press_release', 'Press Release'), ('other', 'Other'),
+    ])
+    status = models.CharField(max_length=20, choices=[
+        ('submitted', 'Submitted for Review'), ('approved', 'CI Approved'),
+        ('rejected', 'Rejected — Changes Required'), ('resubmitted', 'Resubmitted'),
+    ], default='submitted')
+    submitted_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='ci_submissions')
+    reviewed_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='ci_reviews')
+    submission_date = models.DateField()
+    review_date = models.DateField(null=True, blank=True)
+    feedback = models.TextField(blank=True)
+    version = models.PositiveSmallIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)

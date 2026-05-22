@@ -9,6 +9,7 @@ from .models import (
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
     Season, Show, Performance, ProductionLicence,
     SetlistWork, CoProducer, CoProductionSettlement, CoProductionSettlementLine,
+    TouringProduction, TouringVenueDate, RecurringProduction,
 )
 from .serializers import (
     CalendarIssueActionSerializer, CalendarIssueSerializer,
@@ -19,6 +20,7 @@ from .serializers import (
     ProductionLicenceSerializer,
     SetlistWorkSerializer, CoProducerSerializer,
     CoProductionSettlementSerializer, CoProductionSettlementLineSerializer,
+    TouringProductionSerializer, TouringVenueDateSerializer, RecurringProductionSerializer,
 )
 from .services import (
     assign_producer, change_calendar_issue_status, convert_intake_to_context,
@@ -630,6 +632,41 @@ class CoProductionSettlementLineViewSet(TenantScopedMixin, viewsets.ModelViewSet
     serializer_class = CoProductionSettlementLineSerializer
     filterset_fields = ['settlement', 'co_producer', 'is_paid']
     ordering = ['settlement']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Touring Productions ───────────────────────────────────────────────────────
+
+class TouringProductionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = TouringProduction.objects.select_related('operating_context').prefetch_related('venues')
+    serializer_class = TouringProductionSerializer
+    filterset_fields = ['operating_context', 'is_outgoing']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+class TouringVenueDateViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = TouringVenueDate.objects.select_related('touring_production')
+    serializer_class = TouringVenueDateSerializer
+    filterset_fields = ['touring_production', 'status']
+    ordering = ['performance_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Recurring Productions ─────────────────────────────────────────────────────
+
+class RecurringProductionViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = RecurringProduction.objects.select_related('base_operating_context')
+    serializer_class = RecurringProductionSerializer
+    filterset_fields = ['frequency', 'is_active', 'auto_create']
+    search_fields = ['name', 'description']
+    ordering = ['name']
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)

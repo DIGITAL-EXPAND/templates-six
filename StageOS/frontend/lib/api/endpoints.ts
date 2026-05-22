@@ -150,6 +150,23 @@ import type {
   ResidentCompany,
   UnionAgreement,
   UnionCallRate,
+  MaintenanceTicket,
+  MaintenanceSchedule,
+  InspectionRecord,
+  VenueDowntime,
+  CueSheet,
+  CueLine,
+  PropsItem,
+  WardrobeItem,
+  AudienceComplaint,
+  AccessibilityRequirement,
+  MediaContact,
+  NewsletterCampaign,
+  CIComplianceCheck,
+  TouringProduction,
+  TouringVenueDate,
+  RecurringProduction,
+  ExpiryAlert,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -2001,4 +2018,144 @@ export async function fetchUnionRates(token: string) {
   const res = await fetch('/api/v1/operations/union-rates/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: UnionCallRate[] }>;
+}
+
+// Gap-fill endpoints A
+export async function fetchMaintenanceTickets(token: string) {
+  const res = await fetch('/api/v1/operations/maintenance-tickets/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: MaintenanceTicket[] }>;
+}
+export async function createMaintenanceTicket(token: string, payload: Partial<MaintenanceTicket>) {
+  const res = await fetch('/api/v1/operations/maintenance-tickets/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<MaintenanceTicket>;
+}
+export async function resolveMaintenanceTicket(token: string, id: string, notes: string) {
+  const res = await fetch(`/api/v1/operations/maintenance-tickets/${id}/resolve/`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ resolution_notes: notes }) });
+  if (!res.ok) throw new Error('resolve failed');
+  return res.json() as Promise<MaintenanceTicket>;
+}
+export async function fetchMaintenanceSchedules(token: string) {
+  const res = await fetch('/api/v1/operations/maintenance-schedules/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: MaintenanceSchedule[] }>;
+}
+export async function fetchInspections(token: string) {
+  const res = await fetch('/api/v1/operations/inspections/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: InspectionRecord[] }>;
+}
+export async function fetchVenueDowntime(token: string) {
+  const res = await fetch('/api/v1/operations/venue-downtime/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: VenueDowntime[] }>;
+}
+export async function fetchCueSheets(token: string, contextId?: string) {
+  const qs = contextId ? `?operating_context=${contextId}` : '';
+  const res = await fetch(`/api/v1/technical/cue-sheets/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: CueSheet[] }>;
+}
+export async function fetchCueLines(token: string, cueSheetId: string) {
+  const res = await fetch(`/api/v1/technical/cue-lines/?cue_sheet=${cueSheetId}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: CueLine[] }>;
+}
+export async function fetchProps(token: string) {
+  const res = await fetch('/api/v1/technical/props/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: PropsItem[] }>;
+}
+export async function fetchWardrobe(token: string) {
+  const res = await fetch('/api/v1/technical/wardrobe/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: WardrobeItem[] }>;
+}
+export async function fetchComplaints(token: string) {
+  const res = await fetch('/api/v1/operations/complaints/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: AudienceComplaint[] }>;
+}
+export async function createComplaint(token: string, payload: Partial<AudienceComplaint>) {
+  const res = await fetch('/api/v1/operations/complaints/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<AudienceComplaint>;
+}
+export async function fetchAccessibilityRequirements(token: string) {
+  const res = await fetch('/api/v1/operations/accessibility/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: AccessibilityRequirement[] }>;
+}
+
+// Gap-fill endpoints B
+export async function fetchMediaContacts(token: string) {
+  const res = await fetch('/api/v1/marketing/media-contacts/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: MediaContact[] }>;
+}
+export async function createMediaContact(token: string, payload: Partial<MediaContact>) {
+  const res = await fetch('/api/v1/marketing/media-contacts/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<MediaContact>;
+}
+export async function fetchNewsletters(token: string) {
+  const res = await fetch('/api/v1/marketing/newsletters/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: NewsletterCampaign[] }>;
+}
+export async function createNewsletter(token: string, payload: Partial<NewsletterCampaign>) {
+  const res = await fetch('/api/v1/marketing/newsletters/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<NewsletterCampaign>;
+}
+export async function fetchCIChecks(token: string) {
+  const res = await fetch('/api/v1/marketing/ci-compliance/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: CIComplianceCheck[] }>;
+}
+export async function createCICheck(token: string, payload: Partial<CIComplianceCheck>) {
+  const res = await fetch('/api/v1/marketing/ci-compliance/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<CIComplianceCheck>;
+}
+export async function approveCICheck(token: string, id: string) {
+  const res = await fetch(`/api/v1/marketing/ci-compliance/${id}/approve/`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('approve failed');
+  return res.json() as Promise<CIComplianceCheck>;
+}
+export async function fetchTouringProductions(token: string) {
+  const res = await fetch('/api/v1/programming/touring/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: TouringProduction[] }>;
+}
+export async function fetchTouringVenueDates(token: string, touringProductionId: string) {
+  const res = await fetch(`/api/v1/programming/touring-venue-dates/?touring_production=${touringProductionId}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: TouringVenueDate[] }>;
+}
+export async function fetchRecurringProductions(token: string) {
+  const res = await fetch('/api/v1/programming/recurring/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: RecurringProduction[] }>;
+}
+export async function createRecurringProduction(token: string, payload: Partial<RecurringProduction>) {
+  const res = await fetch('/api/v1/programming/recurring/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<RecurringProduction>;
+}
+export async function fetchExpiryAlerts(token: string) {
+  const res = await fetch('/api/v1/governance/expiry-alerts/upcoming/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<ExpiryAlert[]>;
+}
+export async function acknowledgeExpiryAlert(token: string, id: string) {
+  const res = await fetch(`/api/v1/governance/expiry-alerts/${id}/acknowledge/`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('acknowledge failed');
+  return res.json() as Promise<ExpiryAlert>;
+}
+export async function fetchOverdueTasks(token: string) {
+  const res = await fetch('/api/v1/tasks/overdue_summary/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ overdue_tasks: { id: string; title: string; due_date: string; days_overdue: number; status: string }[]; total: number }>;
 }

@@ -234,6 +234,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.shows,
           allItems.seasonAnalytics,
           allItems.festivals,
+          allItems.expiryAlerts,
           allItems.governance,
           allItems.budgets,
           allItems.boardMeetings,

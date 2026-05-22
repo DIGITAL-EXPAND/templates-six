@@ -5,6 +5,7 @@ from .models import (
     CalendarIssue, IntakeRequest, IntakeRequestStatus, IntakeRequestType,
     IntakeReview, ProducerAssignment, VenueHold, CalendarSlot,
     Season, Show, Performance, ProductionLicence,
+    SetlistWork, CoProducer, CoProductionSettlement, CoProductionSettlementLine,
 )
 
 
@@ -261,6 +262,70 @@ class ProductionLicenceSerializer(serializers.ModelSerializer):
 # ── Production Journal ────────────────────────────────────────────────────────
 
 from .models import ProductionJournalEntry  # noqa: E402
+
+
+# ── Setlist Works ─────────────────────────────────────────────────────────────
+
+class SetlistWorkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SetlistWork
+        fields = [
+            'id', 'performance', 'title', 'composer', 'arranger', 'publisher',
+            'isrc_code', 'iswc_code', 'duration_minutes', 'is_original_work',
+            'is_public_domain', 'licensing_body', 'order', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_performance(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Performance')
+
+
+# ── Co-Production ─────────────────────────────────────────────────────────────
+
+class CoProducerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoProducer
+        fields = [
+            'id', 'operating_context', 'partner_name', 'role', 'contact_person',
+            'email', 'phone', 'cost_share_percent', 'revenue_share_percent',
+            'upfront_contribution', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
+
+
+class CoProductionSettlementLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoProductionSettlementLine
+        fields = [
+            'id', 'settlement', 'co_producer', 'amount_due', 'amount_paid',
+            'is_paid', 'payment_date', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_settlement(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Settlement')
+
+    def validate_co_producer(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Co-producer')
+
+
+class CoProductionSettlementSerializer(serializers.ModelSerializer):
+    lines = CoProductionSettlementLineSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CoProductionSettlement
+        fields = [
+            'id', 'operating_context', 'settlement_date', 'total_revenue',
+            'total_costs', 'net_position', 'status', 'settlement_notes',
+            'created_at', 'lines',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_operating_context(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Operating context')
 
 
 class ProductionJournalEntrySerializer(serializers.ModelSerializer):

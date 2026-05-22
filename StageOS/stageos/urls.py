@@ -40,5 +40,6 @@ urlpatterns = [
         path('integrations/', include('apps.integrations.urls')),
         path('hospitality/', include('apps.hospitality.urls')),
         path('patrons/', include('apps.patrons.urls')),
+        path('finance/', include('apps.finance.urls')),
     ])),
 ]

@@ -14,8 +14,10 @@ from .models import (
     DelegationMatrix, DelegationRule,
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
+    IUFWDisciplinaryReferral, IUFWCondonement,
     AGAuditRequest, AGAuditEvidence,
     ConflictOfInterest, PerformanceReport,
+    Section32Report, AnnualReport, AnnualReportSection,
 )
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
@@ -27,8 +29,10 @@ from .serializers import (
     DelegationMatrixSerializer, DelegationRuleSerializer,
     ShareholderCompactSerializer, CompactTargetSerializer, CompactActualSerializer, FundingTrancheSerializer,
     IUFWIncidentSerializer, IUFWInvestigationSerializer, IUFWRecoverySerializer,
+    IUFWDisciplinaryReferralSerializer, IUFWCondonementSerializer,
     AGAuditRequestSerializer, AGAuditEvidenceSerializer,
     ConflictOfInterestSerializer, PerformanceReportSerializer,
+    Section32ReportSerializer, AnnualReportSerializer, AnnualReportSectionSerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -482,6 +486,44 @@ class AGAuditRequestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         ).select_related('provided_by').order_by('category', 'description')
         return Response(AGAuditEvidenceSerializer(qs, many=True, context={'request': request}).data)
 
+    @action(detail=True, methods=['get'])
+    def generate_package(self, request, pk=None):
+        """Generate a complete audit evidence package summary."""
+        audit = self.get_object()
+        evidence = audit.evidence_items.all()
+        total = evidence.count()
+        provided = evidence.filter(is_provided=True).count()
+        outstanding = evidence.filter(is_provided=False)
+
+        by_category = {}
+        for item in evidence:
+            cat = item.category
+            if cat not in by_category:
+                by_category[cat] = {'total': 0, 'provided': 0, 'items': []}
+            by_category[cat]['total'] += 1
+            if item.is_provided:
+                by_category[cat]['provided'] += 1
+            if not item.is_provided:
+                by_category[cat]['items'].append({
+                    'id': str(item.id),
+                    'description': item.description,
+                    'ag_query_ref': item.ag_query_ref,
+                    'document_reference': item.document_reference,
+                })
+
+        return Response({
+            'audit_id': str(audit.id),
+            'financial_year': audit.financial_year,
+            'audit_type': audit.audit_type,
+            'status': audit.status,
+            'completeness_pct': round((provided / total * 100) if total else 0, 1),
+            'total_evidence_items': total,
+            'provided': provided,
+            'outstanding_count': total - provided,
+            'by_category': by_category,
+            'generated_at': timezone.now().isoformat(),
+        })
+
 
 class AGAuditEvidenceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = AGAuditEvidence.objects.select_related('audit', 'provided_by')
@@ -581,6 +623,76 @@ class PerformanceReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         report.approved_date = timezone.now().date()
         report.save(update_fields=['status', 'approved_by', 'approved_date'])
         return Response(PerformanceReportSerializer(report, context={'request': request}).data)
+
+
+# ── Section 32 Reports ────────────────────────────────────────────────────────
+
+class Section32ReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = Section32Report.objects.prefetch_related('programme_lines')
+    serializer_class = Section32ReportSerializer
+    filterset_fields = ['status', 'financial_year', 'month']
+    ordering = ['financial_year', 'month']
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """Submit the Section 32 report to Treasury."""
+        report = self.get_object()
+        report.status = 'submitted'
+        report.submitted_date = timezone.now().date()
+        report.save(update_fields=['status', 'submitted_date'])
+        return Response(Section32ReportSerializer(report, context={'request': request}).data)
+
+
+# ── Annual Report ─────────────────────────────────────────────────────────────
+
+class AnnualReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = AnnualReport.objects.prefetch_related('sections')
+    serializer_class = AnnualReportSerializer
+    filterset_fields = ['status', 'financial_year']
+    ordering = ['-financial_year']
+
+    @action(detail=True, methods=['get'])
+    def progress(self, request, pk=None):
+        """Returns section status counts for the annual report."""
+        report = self.get_object()
+        sections = report.sections.all()
+        status_counts = {}
+        for section in sections:
+            status_counts[section.status] = status_counts.get(section.status, 0) + 1
+        return Response({
+            'report_id': str(report.id),
+            'financial_year': report.financial_year,
+            'status': report.status,
+            'total_sections': sections.count(),
+            'status_counts': status_counts,
+            'sections': AnnualReportSectionSerializer(sections, many=True, context={'request': request}).data,
+        })
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve the annual report at board level."""
+        report = self.get_object()
+        report.status = 'approved'
+        report.approved_by_board_date = timezone.now().date()
+        report.save(update_fields=['status', 'approved_by_board_date'])
+        return Response(AnnualReportSerializer(report, context={'request': request}).data)
+
+
+# ── IUFW Disciplinary & Condonement ──────────────────────────────────────────
+
+class IUFWDisciplinaryReferralViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = IUFWDisciplinaryReferral.objects.select_related('incident', 'referred_by')
+    serializer_class = IUFWDisciplinaryReferralSerializer
+    filterset_fields = ['incident', 'outcome']
+    search_fields = ['employee_name', 'charge_description']
+    ordering = ['-referral_date']
+
+
+class IUFWCondonementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = IUFWCondonement.objects.select_related('incident')
+    serializer_class = IUFWCondonementSerializer
+    filterset_fields = ['incident', 'condoned_by_board', 'treasury_notification_required']
+    ordering = ['-created_at']
 
 
 # ── Board Member Profiles ─────────────────────────────────────────────────────

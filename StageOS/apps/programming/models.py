@@ -474,3 +474,76 @@ class ProductionJournalEntry(TenantOwnedModel):
 
     class Meta:
         ordering = ['-entry_date', '-created_at']
+
+
+# ── Setlist Works ─────────────────────────────────────────────────────────────
+
+class SetlistWork(TenantOwnedModel):
+    """Individual musical/dramatic work performed — for SAMRO/RISA/CAPASSO reporting."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    performance = models.ForeignKey('Performance', on_delete=models.CASCADE, related_name='setlist_works')
+    title = models.CharField(max_length=255)
+    composer = models.CharField(max_length=255, blank=True)
+    arranger = models.CharField(max_length=255, blank=True)
+    publisher = models.CharField(max_length=255, blank=True)
+    isrc_code = models.CharField(max_length=20, blank=True, help_text='International Standard Recording Code')
+    iswc_code = models.CharField(max_length=20, blank=True, help_text='International Standard Musical Work Code')
+    duration_minutes = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    is_original_work = models.BooleanField(default=False)
+    is_public_domain = models.BooleanField(default=False)
+    licensing_body = models.CharField(max_length=20, blank=True, choices=[
+        ('samro', 'SAMRO'), ('risa', 'RISA'), ('capasso', 'CAPASSO'),
+        ('dalro', 'DALRO'), ('none', 'None Required'),
+    ])
+    order = models.PositiveSmallIntegerField(default=0)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['order', 'title']
+
+
+# ── Co-Production ─────────────────────────────────────────────────────────────
+
+class CoProducerRole(models.TextChoices):
+    LEAD_PRODUCER = 'lead_producer', 'Lead Producer'
+    CO_PRODUCER = 'co_producer', 'Co-Producer'
+    PRESENTING_PARTNER = 'presenting_partner', 'Presenting Partner'
+    FUNDING_PARTNER = 'funding_partner', 'Funding Partner'
+    TOURING_PARTNER = 'touring_partner', 'Touring Partner'
+
+class CoProducer(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.CASCADE, related_name='co_producers')
+    partner_name = models.CharField(max_length=255)
+    role = models.CharField(max_length=20, choices=CoProducerRole.choices)
+    contact_person = models.CharField(max_length=255, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    cost_share_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text='% of total costs borne by this partner')
+    revenue_share_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text='% of net revenue due to this partner')
+    upfront_contribution = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CoProductionSettlement(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operating_context = models.ForeignKey('contexts.OperatingContext', on_delete=models.CASCADE, related_name='coproduction_settlements')
+    settlement_date = models.DateField()
+    total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    net_position = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=[
+        ('draft', 'Draft'), ('reviewed', 'Reviewed'), ('agreed', 'Agreed by All Partners'), ('paid', 'Settled / Paid'),
+    ], default='draft')
+    settlement_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CoProductionSettlementLine(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    settlement = models.ForeignKey(CoProductionSettlement, on_delete=models.CASCADE, related_name='lines')
+    co_producer = models.ForeignKey(CoProducer, on_delete=models.CASCADE, related_name='settlement_lines')
+    amount_due = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_paid = models.BooleanField(default=False)
+    payment_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)

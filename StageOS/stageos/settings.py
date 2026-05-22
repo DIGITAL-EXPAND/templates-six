@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'apps.integrations.apps.IntegrationsConfig',
     'apps.hospitality.apps.HospitalityConfig',
     'apps.reports.apps.ReportsConfig',
+    'apps.finance.apps.FinanceConfig',  # GRAP-compliant GL
 ]
 
 MIDDLEWARE = [

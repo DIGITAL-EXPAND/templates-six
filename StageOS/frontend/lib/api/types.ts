@@ -2182,6 +2182,283 @@ export interface BoardMemberProfile {
   annual_declaration_date: string | null;
 }
 
+// Phase 5 full types
+export interface GLAccount {
+  id: string;
+  account_code: string;
+  name: string;
+  category: string;
+  is_active: boolean;
+  grap_standard: string;
+  description: string;
+}
+
+export interface GLJournalLine {
+  id: string;
+  account: string;
+  account_code: string;
+  account_name: string;
+  debit: string;
+  credit: string;
+  description: string;
+}
+
+export interface GLJournalEntry {
+  id: string;
+  reference: string;
+  description: string;
+  entry_date: string;
+  financial_year: string;
+  period: number;
+  is_posted: boolean;
+  source: string;
+  lines: GLJournalLine[];
+  total_debits: number;
+  total_credits: number;
+  is_balanced: boolean;
+}
+
+export interface DeferredIncome {
+  id: string;
+  grant_name: string;
+  grantor: string;
+  financial_year: string;
+  recognition_type: string;
+  total_grant_amount: string;
+  amount_recognised: string;
+  amount_deferred: string;
+  conditions_description: string;
+  is_fully_recognised: boolean;
+  recognition_date: string | null;
+}
+
+export interface Section32ProgrammeLine {
+  id: string;
+  programme_name: string;
+  budget_allocation: string;
+  expenditure_ytd: string;
+  expenditure_this_month: string;
+  variance: string;
+  variance_explanation: string;
+}
+
+export interface Section32Report {
+  id: string;
+  financial_year: string;
+  month: number;
+  reporting_period_end: string;
+  status: string;
+  total_revenue_budget: string;
+  total_revenue_actual: string;
+  total_expenditure_budget: string;
+  total_expenditure_actual: string;
+  grant_receipts_ytd: string;
+  fruitless_wasteful_ytd: string;
+  irregular_ytd: string;
+  submitted_date: string | null;
+  treasury_reference: string;
+  programme_lines: Section32ProgrammeLine[];
+}
+
+export interface AnnualReportSection {
+  id: string;
+  section_type: string;
+  title: string;
+  content: string;
+  status: string;
+  due_date: string | null;
+  word_count: number;
+  reviewer_notes: string;
+  order: number;
+}
+
+export interface AnnualReport {
+  id: string;
+  financial_year: string;
+  status: string;
+  theme: string;
+  overall_audit_outcome: string;
+  tabling_date: string | null;
+  publication_date: string | null;
+  approved_by_board_date: string | null;
+  sections: AnnualReportSection[];
+  sections_complete_count: number;
+  sections_total_count: number;
+}
+
+export interface IUFWDisciplinaryReferral {
+  id: string;
+  incident: string;
+  referral_date: string;
+  employee_name: string;
+  charge_description: string;
+  hearing_date: string | null;
+  outcome: string;
+  sanction_details: string;
+  appeal_lodged: boolean;
+}
+
+export interface AGAuditPackage {
+  audit_id: string;
+  financial_year: string;
+  audit_type: string;
+  status: string;
+  completeness_pct: number;
+  total_evidence_items: number;
+  provided: number;
+  outstanding_count: number;
+  by_category: Record<string, { total: number; provided: number; items: { id: string; description: string; ag_query_ref: string }[] }>;
+  generated_at: string;
+}
+
+// Phase 6 full types
+export interface SetlistWork {
+  id: string;
+  performance: string;
+  title: string;
+  composer: string;
+  arranger: string;
+  publisher: string;
+  isrc_code: string;
+  iswc_code: string;
+  duration_minutes: string;
+  is_original_work: boolean;
+  is_public_domain: boolean;
+  licensing_body: string;
+  order: number;
+}
+
+export interface CoProducer {
+  id: string;
+  operating_context: string;
+  partner_name: string;
+  role: string;
+  contact_person: string;
+  email: string;
+  cost_share_percent: string;
+  revenue_share_percent: string;
+  upfront_contribution: string;
+}
+
+export interface CoProductionSettlementLine {
+  id: string;
+  co_producer: string;
+  amount_due: string;
+  amount_paid: string;
+  is_paid: boolean;
+  payment_date: string | null;
+}
+
+export interface CoProductionSettlement {
+  id: string;
+  operating_context: string;
+  settlement_date: string;
+  total_revenue: string;
+  total_costs: string;
+  net_position: string;
+  status: string;
+  lines: CoProductionSettlementLine[];
+}
+
+export interface RentalBooking {
+  id: string;
+  enquiry: string;
+  booking_number: string;
+  confirmed_date: string;
+  status: string;
+  contract_signed: boolean;
+  contract_signed_date: string | null;
+}
+
+export interface RentalInvoice {
+  id: string;
+  booking: string;
+  invoice_number: string;
+  invoice_type: string;
+  invoice_date: string;
+  due_date: string;
+  subtotal: string;
+  vat_amount: string;
+  total: string;
+  is_paid: boolean;
+  paid_date: string | null;
+  paid_amount: string;
+}
+
+export interface Festival {
+  id: string;
+  name: string;
+  edition: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  expected_attendance: number;
+  max_accreditation: number;
+}
+
+export interface FestivalPass {
+  id: string;
+  festival: string;
+  pass_type: string;
+  holder_name: string;
+  holder_email: string;
+  organisation_name: string;
+  pass_number: string;
+  valid_days: string;
+  venue_access: string;
+  is_active: boolean;
+  issued_date: string | null;
+}
+
+export interface FestivalVenueSlot {
+  id: string;
+  festival: string;
+  festival_venue: string;
+  operating_context: string | null;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  slot_label: string;
+  is_confirmed: boolean;
+}
+
+export interface ResidentCompany {
+  id: string;
+  name: string;
+  company_type: string;
+  status: string;
+  venue: string;
+  artistic_director: string;
+  contact_email: string;
+  residency_start_date: string;
+  residency_end_date: string | null;
+  performance_slots_per_year: number;
+  annual_subsidy: string;
+  rental_rate_discount_pct: string;
+}
+
+export interface UnionAgreement {
+  id: string;
+  union: string;
+  agreement_name: string;
+  effective_date: string;
+  expiry_date: string | null;
+  is_active: boolean;
+  minimum_call_hours: string;
+  overtime_threshold_hours: string;
+  overtime_multiplier: string;
+  turnaround_hours: string;
+}
+
+export interface UnionCallRate {
+  id: string;
+  agreement: string;
+  role_category: string;
+  rate_type: string;
+  minimum_rate: string;
+  effective_date: string;
+}
+
 // Phase 6 types
 export type SeasonCloseOut = {
   season_id: string;

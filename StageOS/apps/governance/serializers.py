@@ -6,8 +6,11 @@ from .models import (
     DelegationMatrix, DelegationRule,
     ShareholderCompact, CompactTarget, CompactActual, FundingTranche,
     IUFWIncident, IUFWInvestigation, IUFWRecovery,
+    IUFWDisciplinaryReferral, IUFWCondonement,
     AGAuditRequest, AGAuditEvidence,
     ConflictOfInterest, PerformanceReport,
+    Section32Report, Section32ProgrammeLine,
+    AnnualReport, AnnualReportSection,
 )
 
 
@@ -474,6 +477,101 @@ class PerformanceReportSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'Prepared by')
+
+
+# ── Section 32 Report ─────────────────────────────────────────────────────────
+
+class Section32ProgrammeLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section32ProgrammeLine
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation']
+
+    def validate_report(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Section 32 report')
+
+
+class Section32ReportSerializer(serializers.ModelSerializer):
+    programme_lines = Section32ProgrammeLineSerializer(many=True, read_only=True)
+    revenue_variance = serializers.SerializerMethodField()
+    expenditure_variance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Section32Report
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation', 'created_at', 'updated_at']
+
+    def get_revenue_variance(self, obj):
+        return float(obj.total_revenue_actual - obj.total_revenue_budget)
+
+    def get_expenditure_variance(self, obj):
+        return float(obj.total_expenditure_actual - obj.total_expenditure_budget)
+
+    def validate_prepared_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Prepared by')
+
+
+# ── Annual Report ─────────────────────────────────────────────────────────────
+
+class AnnualReportSectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnnualReportSection
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation']
+
+    def validate_report(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'Annual report')
+
+    def validate_assigned_to(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Assigned to')
+
+
+class AnnualReportSerializer(serializers.ModelSerializer):
+    sections = AnnualReportSectionSerializer(many=True, read_only=True)
+    sections_complete_count = serializers.SerializerMethodField()
+    sections_total_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AnnualReport
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation', 'created_at', 'updated_at']
+
+    def get_sections_complete_count(self, obj):
+        return obj.sections.filter(status__in=['reviewed', 'approved']).count()
+
+    def get_sections_total_count(self, obj):
+        return obj.sections.count()
+
+
+# ── IUFW Disciplinary & Condonement ──────────────────────────────────────────
+
+class IUFWDisciplinaryReferralSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IUFWDisciplinaryReferral
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation', 'created_at']
+
+    def validate_incident(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'IUFW incident')
+
+    def validate_referred_by(self, value):
+        if value is None:
+            return value
+        return check_tenant_fk(value, self.context.get('request'), 'Referred by')
+
+
+class IUFWCondonementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IUFWCondonement
+        fields = '__all__'
+        read_only_fields = ['id', 'organisation', 'created_at']
+
+    def validate_incident(self, value):
+        return check_tenant_fk(value, self.context.get('request'), 'IUFW incident')
 
 
 # ── Board Member Profiles ─────────────────────────────────────────────────────

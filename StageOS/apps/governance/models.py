@@ -751,3 +751,150 @@ class BoardMemberProfile(TenantOwnedModel):
 
     class Meta:
         ordering = ['status', 'appointment_date']
+
+
+# ── Section 32 Report ─────────────────────────────────────────────────────────
+
+class Section32Report(TenantOwnedModel):
+    """Monthly Section 32 financial report to National Treasury (PFMA s.32)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    financial_year = models.CharField(max_length=9)
+    month = models.PositiveSmallIntegerField(choices=[(i, f'Month {i}') for i in range(1, 13)])
+    reporting_period_end = models.DateField()
+    status = models.CharField(max_length=20, choices=[
+        ('draft', 'Draft'),
+        ('reviewed', 'Reviewed'),
+        ('submitted', 'Submitted to Treasury'),
+        ('acknowledged', 'Acknowledged by Treasury'),
+    ], default='draft')
+    total_revenue_budget = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_revenue_actual = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_expenditure_budget = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_expenditure_actual = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    grant_receipts_ytd = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    fruitless_wasteful_ytd = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    irregular_ytd = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    prepared_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='section32_reports')
+    submitted_date = models.DateField(null=True, blank=True)
+    treasury_reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('organisation', 'financial_year', 'month')]
+        ordering = ['financial_year', 'month']
+
+
+class Section32ProgrammeLine(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(Section32Report, on_delete=models.CASCADE, related_name='programme_lines')
+    programme_name = models.CharField(max_length=255)
+    budget_allocation = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    expenditure_ytd = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    expenditure_this_month = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    variance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    variance_explanation = models.TextField(blank=True)
+
+
+# ── Annual Report ─────────────────────────────────────────────────────────────
+
+class AnnualReportStatus(models.TextChoices):
+    PLANNING = 'planning', 'Planning'
+    DRAFTING = 'drafting', 'Sections Being Drafted'
+    REVIEW = 'review', 'Under Internal Review'
+    BOARD_APPROVAL = 'board_approval', 'Awaiting Board Approval'
+    APPROVED = 'approved', 'Board Approved'
+    SUBMITTED = 'submitted', 'Submitted to Executive Authority'
+    PUBLISHED = 'published', 'Published / Tabled in Parliament'
+
+class AnnualReportSectionType(models.TextChoices):
+    PART_A_GENERAL = 'part_a', 'Part A — General Information'
+    PART_B_PERFORMANCE = 'part_b', 'Part B — Performance Information'
+    PART_C_GOVERNANCE = 'part_c', 'Part C — Governance'
+    PART_D_HR = 'part_d', 'Part D — Human Resources'
+    PART_E_FINANCIAL = 'part_e', 'Part E — Financial Statements'
+    SUPPLEMENTARY = 'supplementary', 'Supplementary Information'
+
+class AnnualReport(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    financial_year = models.CharField(max_length=9)
+    status = models.CharField(max_length=20, choices=AnnualReportStatus.choices, default=AnnualReportStatus.PLANNING)
+    theme = models.CharField(max_length=255, blank=True)
+    ceo_message = models.TextField(blank=True)
+    chairperson_message = models.TextField(blank=True)
+    tabling_date = models.DateField(null=True, blank=True)
+    publication_date = models.DateField(null=True, blank=True)
+    approved_by_board_date = models.DateField(null=True, blank=True)
+    overall_audit_outcome = models.CharField(max_length=30, blank=True, choices=[
+        ('clean', 'Clean Audit'),
+        ('unqualified_emphasis', 'Unqualified with Emphasis of Matter'),
+        ('qualified', 'Qualified Opinion'),
+        ('adverse', 'Adverse Opinion'),
+        ('disclaimer', 'Disclaimer of Opinion'),
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('organisation', 'financial_year')]
+
+class AnnualReportSection(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(AnnualReport, on_delete=models.CASCADE, related_name='sections')
+    section_type = models.CharField(max_length=20, choices=AnnualReportSectionType.choices)
+    title = models.CharField(max_length=255)
+    content = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=[
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('draft_complete', 'Draft Complete'),
+        ('reviewed', 'Reviewed'),
+        ('approved', 'Approved'),
+    ], default='not_started')
+    assigned_to = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='annual_report_sections')
+    due_date = models.DateField(null=True, blank=True)
+    word_count = models.PositiveIntegerField(default=0)
+    reviewer_notes = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'section_type']
+
+
+# ── IUFW Extensions ───────────────────────────────────────────────────────────
+
+class IUFWDisciplinaryReferral(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.ForeignKey(IUFWIncident, on_delete=models.CASCADE, related_name='disciplinary_referrals')
+    referred_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='iufw_disciplinary_referrals')
+    referral_date = models.DateField()
+    employee_name = models.CharField(max_length=255)
+    charge_description = models.TextField()
+    hearing_date = models.DateField(null=True, blank=True)
+    outcome = models.CharField(max_length=50, blank=True, choices=[
+        ('pending', 'Hearing Pending'),
+        ('guilty_dismissal', 'Guilty — Dismissed'),
+        ('guilty_final_warning', 'Guilty — Final Written Warning'),
+        ('guilty_other', 'Guilty — Other Sanction'),
+        ('not_guilty', 'Not Guilty'),
+        ('withdrawn', 'Withdrawn'),
+    ])
+    sanction_details = models.TextField(blank=True)
+    appeal_lodged = models.BooleanField(default=False)
+    appeal_outcome = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class IUFWCondonement(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    incident = models.OneToOneField(IUFWIncident, on_delete=models.CASCADE, related_name='condonement')
+    condoned_by_board = models.BooleanField(default=False)
+    board_resolution_number = models.CharField(max_length=100, blank=True)
+    condonement_date = models.DateField(null=True, blank=True)
+    motivation = models.TextField(blank=True)
+    treasury_notification_required = models.BooleanField(default=True)
+    treasury_notified_date = models.DateField(null=True, blank=True)
+    ag_disclosure_required = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

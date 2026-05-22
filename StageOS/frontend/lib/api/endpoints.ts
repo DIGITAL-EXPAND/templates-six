@@ -1,6 +1,12 @@
 import { ApiError, apiRequest, apiUrl } from './client';
 import type {
   AuthTokens,
+  GLAccount,
+  GLJournalEntry,
+  DeferredIncome,
+  Section32Report,
+  AnnualReport,
+  AGAuditPackage,
   ConflictOfInterest,
   PerformanceReport,
   SupplierQuote,
@@ -134,6 +140,16 @@ import type {
   Donor,
   Donation,
   BoardMemberProfile,
+  SetlistWork,
+  CoProducer,
+  CoProductionSettlement,
+  RentalBooking,
+  RentalInvoice,
+  Festival,
+  FestivalPass,
+  ResidentCompany,
+  UnionAgreement,
+  UnionCallRate,
 } from './types';
 
 function queryString(params?: Record<string, string | boolean | null | undefined>) {
@@ -1800,4 +1816,189 @@ export async function fetchBoardMembers(token: string) {
   const res = await fetch('/api/v1/governance/board-members/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: BoardMemberProfile[] }>;
+}
+
+// Phase 5 full endpoints
+export async function fetchGLAccounts(token: string) {
+  const res = await fetch('/api/v1/finance/accounts/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: GLAccount[] }>;
+}
+
+export async function fetchTrialBalance(token: string, financialYear: string) {
+  const res = await fetch(`/api/v1/finance/accounts/trial_balance/?financial_year=${financialYear}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ account_code: string; account_name: string; category: string; total_debit: number; total_credit: number; net: number }[]>;
+}
+
+export async function fetchGLJournals(token: string, financialYear?: string) {
+  const qs = financialYear ? `?financial_year=${financialYear}` : '';
+  const res = await fetch(`/api/v1/finance/journals/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: GLJournalEntry[] }>;
+}
+
+export async function postGLJournal(token: string, journalId: string) {
+  const res = await fetch(`/api/v1/finance/journals/${journalId}/post_entry/`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('post failed');
+  return res.json() as Promise<GLJournalEntry>;
+}
+
+export async function fetchDeferredIncome(token: string) {
+  const res = await fetch('/api/v1/finance/deferred-income/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: DeferredIncome[] }>;
+}
+
+export async function recogniseDeferredIncome(token: string, id: string, amount: number) {
+  const res = await fetch(`/api/v1/finance/deferred-income/${id}/recognise/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) throw new Error('recognise failed');
+  return res.json() as Promise<DeferredIncome>;
+}
+
+export async function fetchSection32Reports(token: string) {
+  const res = await fetch('/api/v1/governance/section32/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: Section32Report[] }>;
+}
+
+export async function submitSection32Report(token: string, id: string) {
+  const res = await fetch(`/api/v1/governance/section32/${id}/submit/`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('submit failed');
+  return res.json() as Promise<Section32Report>;
+}
+
+export async function fetchAnnualReports(token: string) {
+  const res = await fetch('/api/v1/governance/annual-reports/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: AnnualReport[] }>;
+}
+
+export async function approveAnnualReport(token: string, id: string) {
+  const res = await fetch(`/api/v1/governance/annual-reports/${id}/approve/`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('approve failed');
+  return res.json() as Promise<AnnualReport>;
+}
+
+export async function fetchAGAuditPackage(token: string, auditId: string) {
+  const res = await fetch(`/api/v1/governance/ag-audit-requests/${auditId}/generate_package/`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<AGAuditPackage>;
+}
+
+// Phase 6 full endpoints
+export async function fetchSetlistWorks(token: string, performanceId?: string) {
+  const qs = performanceId ? `?performance=${performanceId}` : '';
+  const res = await fetch(`/api/v1/programming/setlist-works/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: SetlistWork[] }>;
+}
+
+export async function createSetlistWork(token: string, payload: Partial<SetlistWork>) {
+  const res = await fetch('/api/v1/programming/setlist-works/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<SetlistWork>;
+}
+
+export async function fetchSAMROReport(token: string, dateFrom: string, dateTo: string) {
+  const res = await fetch(`/api/v1/programming/setlist-works/samro_report/?date_from=${dateFrom}&date_to=${dateTo}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ works: Record<string, string>[]; total_works: number }>;
+}
+
+export async function fetchCoProducers(token: string) {
+  const res = await fetch('/api/v1/programming/co-producers/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: CoProducer[] }>;
+}
+
+export async function fetchCoProductionSettlements(token: string) {
+  const res = await fetch('/api/v1/programming/co-production-settlements/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: CoProductionSettlement[] }>;
+}
+
+export async function agreeCoProductionSettlement(token: string, id: string) {
+  const res = await fetch(`/api/v1/programming/co-production-settlements/${id}/agree/`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('agree failed');
+  return res.json() as Promise<CoProductionSettlement>;
+}
+
+export async function fetchRentalBookings(token: string) {
+  const res = await fetch('/api/v1/structure/rental-bookings/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: RentalBooking[] }>;
+}
+
+export async function fetchRentalInvoices(token: string) {
+  const res = await fetch('/api/v1/structure/rental-invoices/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: RentalInvoice[] }>;
+}
+
+export async function createRentalInvoice(token: string, bookingId: string, invoiceType: string) {
+  const res = await fetch(`/api/v1/structure/rental-bookings/${bookingId}/invoice/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ invoice_type: invoiceType }),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<RentalInvoice>;
+}
+
+export async function fetchFestivals(token: string) {
+  const res = await fetch('/api/v1/festivals/festivals/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: Festival[] }>;
+}
+
+export async function fetchFestivalPasses(token: string, festivalId?: string) {
+  const qs = festivalId ? `?festival=${festivalId}` : '';
+  const res = await fetch(`/api/v1/festivals/passes/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: FestivalPass[] }>;
+}
+
+export async function createFestivalPass(token: string, payload: Partial<FestivalPass>) {
+  const res = await fetch('/api/v1/festivals/passes/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('create failed');
+  return res.json() as Promise<FestivalPass>;
+}
+
+export async function fetchResidentCompanies(token: string) {
+  const res = await fetch('/api/v1/structure/resident-companies/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: ResidentCompany[] }>;
+}
+
+export async function fetchUnionAgreements(token: string) {
+  const res = await fetch('/api/v1/operations/union-agreements/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: UnionAgreement[] }>;
+}
+
+export async function fetchUnionRates(token: string) {
+  const res = await fetch('/api/v1/operations/union-rates/', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ results: UnionCallRate[] }>;
 }

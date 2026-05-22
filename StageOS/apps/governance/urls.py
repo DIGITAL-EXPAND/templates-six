@@ -7,9 +7,11 @@ from .views import (
     DelegationMatrixViewSet, DelegationRuleViewSet,
     ShareholderCompactViewSet, CompactTargetViewSet, CompactActualViewSet, FundingTrancheViewSet,
     IUFWIncidentViewSet, IUFWInvestigationViewSet, IUFWRecoveryViewSet,
+    IUFWDisciplinaryReferralViewSet, IUFWCondonementViewSet,
     AGAuditRequestViewSet, AGAuditEvidenceViewSet,
     ConflictOfInterestViewSet, PerformanceReportViewSet,
     BoardMemberProfileViewSet,
+    Section32ReportViewSet, AnnualReportViewSet,
 )
 
 router = DefaultRouter()
@@ -36,5 +38,9 @@ router.register('ag-audit-evidence', AGAuditEvidenceViewSet, basename='ag-audit-
 router.register('conflict-of-interest', ConflictOfInterestViewSet, basename='conflict-of-interest')
 router.register('performance-reports', PerformanceReportViewSet, basename='performance-report')
 router.register('board-members', BoardMemberProfileViewSet, basename='board-member')
+router.register('section32', Section32ReportViewSet, basename='section32')
+router.register('annual-reports', AnnualReportViewSet, basename='annual-report')
+router.register('iufw-disciplinary', IUFWDisciplinaryReferralViewSet, basename='iufw-disciplinary')
+router.register('iufw-condonements', IUFWCondonementViewSet, basename='iufw-condonement')
 
 urlpatterns = router.urls

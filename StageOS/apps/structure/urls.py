@@ -17,6 +17,7 @@ from .views import (
     RentalBookingViewSet,
     RentalInvoiceViewSet,
     ResidentCompanyViewSet,
+    VenueHoldExpiryViewSet,
 )
 
 router = DefaultRouter()
@@ -37,5 +38,6 @@ router.register('rental-quotes', VenueRentalQuoteViewSet, basename='rental-quote
 router.register('rental-bookings', RentalBookingViewSet, basename='rental-booking')
 router.register('rental-invoices', RentalInvoiceViewSet, basename='rental-invoice')
 router.register('resident-companies', ResidentCompanyViewSet, basename='resident-company')
+router.register('venue-hold-expiries', VenueHoldExpiryViewSet, basename='venue-hold-expiry')
 
 urlpatterns = router.urls

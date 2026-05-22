@@ -18,6 +18,7 @@ from .models import (
     AGAuditRequest, AGAuditEvidence,
     ConflictOfInterest, PerformanceReport,
     Section32Report, AnnualReport, AnnualReportSection,
+    ExpiryAlert,
 )
 from .serializers import (
     ExecutiveActionSerializer, ExecutiveActionStatusSerializer,
@@ -33,6 +34,7 @@ from .serializers import (
     AGAuditRequestSerializer, AGAuditEvidenceSerializer,
     ConflictOfInterestSerializer, PerformanceReportSerializer,
     Section32ReportSerializer, AnnualReportSerializer, AnnualReportSectionSerializer,
+    ExpiryAlertSerializer,
 )
 from .services import (
     acknowledge_executive_action, cancel_executive_action,
@@ -451,6 +453,24 @@ class IUFWIncidentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         })
 
 
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        import csv
+        from django.http import HttpResponse
+        qs = self.get_queryset()
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="iufw_register.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Reference', 'Type', 'Status', 'Financial Year', 'Description', 'Amount', 'Discovered Date', 'Reported to Board', 'Reported to AG'])
+        for incident in qs:
+            writer.writerow([
+                incident.reference_number, incident.iufw_type, incident.status,
+                incident.financial_year, incident.description, str(incident.amount),
+                str(incident.discovered_date), incident.reported_to_board, incident.reported_to_ag,
+            ])
+        return response
+
+
 class IUFWInvestigationViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = IUFWInvestigation.objects.select_related('incident', 'investigator')
     serializer_class = IUFWInvestigationSerializer
@@ -594,6 +614,23 @@ class ConflictOfInterestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             'register': result,
         })
 
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        import csv
+        from django.http import HttpResponse
+        qs = self.get_queryset()
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="conflict_of_interest_register.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Declarant', 'Category', 'Status', 'Financial Year', 'Entity Name', 'Description', 'Declaration Date', 'Is Annual Declaration'])
+        for declaration in qs:
+            writer.writerow([
+                str(declaration.declarant_id), declaration.category, declaration.status,
+                declaration.financial_year, declaration.entity_name, declaration.description,
+                str(declaration.declaration_date), declaration.is_annual_declaration,
+            ])
+        return response
+
 
 # ── Performance Report ────────────────────────────────────────────────────────
 
@@ -641,6 +678,25 @@ class Section32ReportViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         report.submitted_date = timezone.now().date()
         report.save(update_fields=['status', 'submitted_date'])
         return Response(Section32ReportSerializer(report, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        import csv
+        from django.http import HttpResponse
+        qs = self.get_queryset()
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="section32_reports.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Financial Year', 'Month', 'Status', 'Total Budget', 'Total Actual', 'Variance', 'Submitted Date'])
+        for report in qs:
+            writer.writerow([
+                report.financial_year, report.month, report.status,
+                str(getattr(report, 'total_budget', '')),
+                str(getattr(report, 'total_actual', '')),
+                str(getattr(report, 'variance', '')),
+                str(report.submitted_date) if hasattr(report, 'submitted_date') and report.submitted_date else '',
+            ])
+        return response
 
 
 # ── Annual Report ─────────────────────────────────────────────────────────────

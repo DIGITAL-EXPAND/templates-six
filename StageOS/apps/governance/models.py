@@ -898,3 +898,33 @@ class IUFWCondonement(TenantOwnedModel):
     ag_disclosure_required = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ── Expiry Alerts ─────────────────────────────────────────────────────────────
+
+class ExpiryAlertType(models.TextChoices):
+    CSD_VERIFICATION = 'csd_verification', 'CSD Verification Expiry'
+    TAX_CLEARANCE = 'tax_clearance', 'Tax Clearance Expiry'
+    BEE_CERTIFICATE = 'bee_certificate', 'B-BBEE Certificate Expiry'
+    LIQUOR_LICENCE = 'liquor_licence', 'Liquor Licence Expiry'
+    SAFETY_CERTIFICATE = 'safety_cert', 'Safety Certificate Expiry'
+    INSPECTION = 'inspection', 'Venue Inspection Due'
+    INSURANCE = 'insurance', 'Insurance Policy Expiry'
+    CONTRACT = 'contract', 'Contract Expiry'
+    BOARD_TERM = 'board_term', 'Board Member Term Expiry'
+    DELEGATION = 'delegation', 'Delegation Matrix Review Due'
+
+class ExpiryAlert(TenantOwnedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    alert_type = models.CharField(max_length=25, choices=ExpiryAlertType.choices)
+    reference_description = models.CharField(max_length=255)
+    expiry_date = models.DateField()
+    days_warning = models.PositiveSmallIntegerField(default=30, help_text='Alert X days before expiry')
+    is_acknowledged = models.BooleanField(default=False)
+    acknowledged_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='acknowledged_expiry_alerts')
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    auto_created = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['expiry_date']

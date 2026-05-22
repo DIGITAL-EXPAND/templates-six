@@ -11,6 +11,7 @@ from .models import (
     ConflictOfInterest, PerformanceReport,
     Section32Report, Section32ProgrammeLine,
     AnnualReport, AnnualReportSection,
+    ExpiryAlert,
 )
 
 
@@ -596,3 +597,13 @@ class BoardMemberProfileSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         return check_tenant_fk(value, self.context.get('request'), 'User')
+
+
+class ExpiryAlertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpiryAlert
+        fields = [
+            'id', 'alert_type', 'reference_description', 'expiry_date', 'days_warning',
+            'is_acknowledged', 'acknowledged_by', 'acknowledged_at', 'auto_created', 'created_at',
+        ]
+        read_only_fields = ['id', 'is_acknowledged', 'acknowledged_by', 'acknowledged_at', 'created_at']

@@ -133,6 +133,14 @@ const allItems = {
   festivals:        { label: 'Festivals',              href: '/festivals',                 icon: CalendarClock },
   residents:        { label: 'Resident Companies',     href: '/structure/residents',       icon: Users },
   union:            { label: 'Union Agreements',       href: '/operations/union',          icon: Scale },
+  maintenance:      { label: 'Maintenance',            href: '/operations/maintenance',    icon: Wrench },
+  cueSheets:        { label: 'Cue Sheets',             href: '/technical/cues',            icon: ClipboardCheck },
+  propsWardrobe:    { label: 'Props & Wardrobe',       href: '/technical/props',           icon: ShoppingCart },
+  complaints:       { label: 'Complaints',             href: '/operations/complaints',     icon: Bell },
+  mediaContacts:    { label: 'Media & CI',              href: '/marketing/media',            icon: Megaphone },
+  touringProds:     { label: 'Touring',                 href: '/programming/touring',        icon: Truck },
+  recurringProds:   { label: 'Recurring',               href: '/programming/recurring',      icon: Activity },
+  expiryAlerts:     { label: 'Expiry Alerts',           href: '/governance/alerts',          icon: Bell },
 };
 
 function departmentItem(kind: DashboardKind) {
@@ -164,6 +172,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.workflows,
           allItems.programming,
           allItems.shows,
+          allItems.touringProds,
+          allItems.recurringProds,
           allItems.setlist,
           allItems.coproduction,
           allItems.journal,
@@ -187,8 +197,13 @@ export function navigationGroups(profile: OperatingProfile | null) {
         label: 'Departments',
         items: [
           allItems.marketing,
+          allItems.mediaContacts,
           allItems.technical,
+          allItems.cueSheets,
+          allItems.propsWardrobe,
           allItems.operations,
+          allItems.maintenance,
+          allItems.complaints,
           allItems.safety,
           allItems.leaveManagement,
           allItems.ticketing,
@@ -202,7 +217,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.section32, allItems.annualReport, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
+        items: [allItems.expiryAlerts, allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.section32, allItems.annualReport, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -289,8 +304,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.workspaces,
       departmentItem(kind),
       ...(kind === 'programming' ? [allItems.shows, allItems.setlist, allItems.coproduction, allItems.journal, allItems.seasonAnalytics, allItems.workflows] : []),
-      ...(kind === 'foh' ? [allItems.safety, allItems.union] : []),
-      ...(kind === 'technical' ? [allItems.union] : []),
+      ...(kind === 'foh' ? [allItems.safety, allItems.union, allItems.complaints, allItems.maintenance] : []),
+      ...(kind === 'technical' ? [allItems.union, allItems.cueSheets, allItems.propsWardrobe] : []),
       allItems.tasks,
       allItems.documents,
       allItems.reports,

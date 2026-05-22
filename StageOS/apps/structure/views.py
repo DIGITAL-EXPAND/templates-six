@@ -134,19 +134,23 @@ class VenueRentalEnquiryViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def convert_to_production(self, request, pk=None):
         """Convert a confirmed rental enquiry into an OperatingContext (production)."""
-        from contexts.models import OperatingContext
+        from apps.contexts.models import OperatingContext
         enquiry = self.get_object()
         if enquiry.status not in ['quote_accepted', 'agreement_signed', 'deposit_received', 'confirmed']:
             return Response({'error': 'Enquiry must be at quote_accepted or later stage to convert.'}, status=400)
-        # Create operating context
+        # Resolve required FK fields from the enquiry venue
+        site = enquiry.venue.site if enquiry.venue else None
+        owner = request.user
         ctx = OperatingContext.objects.create(
             organisation=enquiry.organisation,
             title=enquiry.event_name,
-            context_type='external_hire',
+            context_type='venue_rental',
             start_date=enquiry.event_date,
             end_date=enquiry.event_end_date or enquiry.event_date,
-            status='approved',
-            description=f'Created from rental enquiry {enquiry.reference_number}',
+            status='confirmed',
+            synopsis=f'Created from rental enquiry {enquiry.reference_number}',
+            site=site,
+            owner=owner,
         )
         enquiry.status = 'confirmed'
         enquiry.save()

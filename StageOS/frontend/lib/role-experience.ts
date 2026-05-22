@@ -304,7 +304,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       allItems.calendar,
       allItems.workspaces,
       departmentItem(kind),
-      ...(kind === 'programming' ? [allItems.shows, allItems.setlist, allItems.coproduction, allItems.journal, allItems.seasonAnalytics, allItems.workflows] : []),
+      ...(kind === 'programming' ? [allItems.shows, allItems.touringProds, allItems.recurringProds, allItems.setlist, allItems.coproduction, allItems.journal, allItems.seasonAnalytics, allItems.workflows] : []),
       ...(kind === 'foh' ? [allItems.safety, allItems.union, allItems.complaints, allItems.maintenance] : []),
       ...(kind === 'technical' ? [allItems.union, allItems.cueSheets, allItems.propsWardrobe] : []),
       allItems.tasks,
@@ -316,9 +316,9 @@ export function navigationGroups(profile: OperatingProfile | null) {
     if (kind === 'ticketing') {
       deptItems.splice(5, 0, allItems.boxOffice, allItems.tillRecon);
     }
-    // Marketing managers get Patron CRM
+    // Marketing managers get Patron CRM and Media & CI
     if (kind === 'marketing') {
-      deptItems.splice(5, 0, allItems.patrons);
+      deptItems.splice(5, 0, allItems.patrons, allItems.mediaContacts);
     }
     return [{ label: 'Department', items: deptItems }];
   }

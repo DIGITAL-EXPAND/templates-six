@@ -780,3 +780,42 @@ class BoardMemberProfileViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             data['days_until_term_end'] = days_until_term_end
             results.append(data)
         return Response(results)
+
+
+# ── Expiry Alerts ─────────────────────────────────────────────────────────────
+
+class ExpiryAlertViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ExpiryAlert.objects.all()
+    serializer_class = ExpiryAlertSerializer
+    filterset_fields = ['alert_type', 'is_acknowledged', 'auto_created']
+    search_fields = ['reference_description']
+    ordering = ['expiry_date']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def acknowledge(self, request, pk=None):
+        alert = self.get_object()
+        alert.is_acknowledged = True
+        alert.acknowledged_by = request.user
+        alert.acknowledged_at = timezone.now()
+        alert.save(update_fields=['is_acknowledged', 'acknowledged_by', 'acknowledged_at'])
+        return Response(ExpiryAlertSerializer(alert, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Returns alerts where expiry_date <= today + days_warning and not acknowledged."""
+        import datetime
+        from django.db.models import F, ExpressionWrapper, DateField
+        today = timezone.now().date()
+        # Filter: expiry_date <= today + days_warning AND not acknowledged
+        # We compare per-record, so we iterate or use a subquery approach
+        qs = self.get_queryset().filter(is_acknowledged=False)
+        upcoming_alerts = [
+            alert for alert in qs
+            if alert.expiry_date <= today + datetime.timedelta(days=alert.days_warning)
+        ]
+        upcoming_alerts.sort(key=lambda a: a.expiry_date)
+        data = ExpiryAlertSerializer(upcoming_alerts, many=True, context={'request': request}).data
+        return Response({'upcoming_alerts': data, 'total': len(upcoming_alerts)})

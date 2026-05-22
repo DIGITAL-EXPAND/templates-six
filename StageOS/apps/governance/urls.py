@@ -12,6 +12,7 @@ from .views import (
     ConflictOfInterestViewSet, PerformanceReportViewSet,
     BoardMemberProfileViewSet,
     Section32ReportViewSet, AnnualReportViewSet,
+    ExpiryAlertViewSet,
 )
 
 router = DefaultRouter()
@@ -42,5 +43,6 @@ router.register('section32', Section32ReportViewSet, basename='section32')
 router.register('annual-reports', AnnualReportViewSet, basename='annual-report')
 router.register('iufw-disciplinary', IUFWDisciplinaryReferralViewSet, basename='iufw-disciplinary')
 router.register('iufw-condonements', IUFWCondonementViewSet, basename='iufw-condonement')
+router.register('expiry-alerts', ExpiryAlertViewSet, basename='expiry-alert')
 
 urlpatterns = router.urls

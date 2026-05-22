@@ -136,6 +136,24 @@ class TaskViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         updated = block_task(task, request.user, request.data.get('comment', ''))
         return Response(TaskSerializer(updated, context={'request': request}).data)
 
+    @action(detail=False, methods=['get'])
+    def overdue_summary(self, request):
+        from django.utils import timezone
+        today = timezone.now().date()
+        qs = self.get_queryset().filter(due_date__lt=today, status__in=['pending', 'in_progress'])
+        data = []
+        for task in qs:
+            data.append({
+                'id': str(task.id),
+                'title': task.title,
+                'due_date': str(task.due_date),
+                'days_overdue': (today - task.due_date).days,
+                'assigned_to': str(task.assigned_to_id) if hasattr(task, 'assigned_to_id') else None,
+                'status': task.status,
+            })
+        data.sort(key=lambda x: x['days_overdue'], reverse=True)
+        return Response({'overdue_tasks': data, 'total': len(data)})
+
 
 class TaskCommentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = TaskComment.objects.select_related('task', 'author')

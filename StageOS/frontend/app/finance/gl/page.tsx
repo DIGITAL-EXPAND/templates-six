@@ -257,7 +257,7 @@ export default function GLPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
           {jLoading && <LoadingState />}
           {jError && <ErrorState message={jError} />}
-          {!jLoading && !jError && journals.length === 0 && <EmptyState message="No journal entries found." />}
+          {!jLoading && !jError && journals.length === 0 && <EmptyState title="No journal entries found." />}
           {!jLoading && !jError && journals.length > 0 && (
             <div className="divide-y divide-gray-100">
               {journals.map((j) => (
@@ -330,7 +330,7 @@ export default function GLPage() {
         <h2 className="text-base font-semibold mb-4">Deferred Income (GRAP 23)</h2>
         {dLoading && <LoadingState />}
         {dError && <ErrorState message={dError} />}
-        {!dLoading && !dError && deferred.length === 0 && <EmptyState message="No deferred income records." />}
+        {!dLoading && !dError && deferred.length === 0 && <EmptyState title="No deferred income records." />}
         {!dLoading && !dError && deferred.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

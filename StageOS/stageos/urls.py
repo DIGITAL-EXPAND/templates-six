@@ -41,5 +41,6 @@ urlpatterns = [
         path('hospitality/', include('apps.hospitality.urls')),
         path('patrons/', include('apps.patrons.urls')),
         path('finance/', include('apps.finance.urls')),
+        path('festivals/', include('apps.festivals.urls')),
     ])),
 ]

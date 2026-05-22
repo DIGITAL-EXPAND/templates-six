@@ -14,6 +14,9 @@ from .views import (
     VenueViewSet,
     VenueRentalEnquiryViewSet,
     VenueRentalQuoteViewSet,
+    RentalBookingViewSet,
+    RentalInvoiceViewSet,
+    ResidentCompanyViewSet,
 )
 
 router = DefaultRouter()
@@ -31,5 +34,8 @@ router.register('sop-templates', SOPTemplateViewSet, basename='sop-template')
 router.register('venue-capacity-configs', VenueCapacityConfigViewSet, basename='venue-capacity-config')
 router.register('rental-enquiries', VenueRentalEnquiryViewSet, basename='rental-enquiry')
 router.register('rental-quotes', VenueRentalQuoteViewSet, basename='rental-quote')
+router.register('rental-bookings', RentalBookingViewSet, basename='rental-booking')
+router.register('rental-invoices', RentalInvoiceViewSet, basename='rental-invoice')
+router.register('resident-companies', ResidentCompanyViewSet, basename='resident-company')
 
 urlpatterns = router.urls

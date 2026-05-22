@@ -138,3 +138,68 @@ class VenueRentalQuoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organisation_id=self.request.user.organisation_id)
+
+
+# ── Rental Booking & Invoice ──────────────────────────────────────────────────
+
+class RentalBookingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = RentalBooking.objects.select_related('enquiry', 'quote').prefetch_related('invoices')
+    serializer_class = RentalBookingSerializer
+    filterset_fields = ['enquiry', 'status', 'contract_signed']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Mark booking as completed."""
+        booking = self.get_object()
+        booking.status = 'completed'
+        booking.save(update_fields=['status', 'updated_at'])
+        return Response(RentalBookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def invoice(self, request, pk=None):
+        """Create a RentalInvoice for this booking."""
+        booking = self.get_object()
+        data = request.data.copy()
+        data['booking'] = str(booking.id)
+        serializer = RentalInvoiceSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        inv = serializer.save(organisation_id=request.user.organisation_id)
+        return Response(RentalInvoiceSerializer(inv, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class RentalInvoiceViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = RentalInvoice.objects.select_related('booking')
+    serializer_class = RentalInvoiceSerializer
+    filterset_fields = ['booking', 'invoice_type', 'is_paid']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        """Mark invoice as paid."""
+        invoice = self.get_object()
+        invoice.is_paid = True
+        invoice.paid_date = datetime.date.today()
+        paid_amount = request.data.get('paid_amount', invoice.total)
+        invoice.paid_amount = paid_amount
+        invoice.save(update_fields=['is_paid', 'paid_date', 'paid_amount'])
+        return Response(RentalInvoiceSerializer(invoice, context={'request': request}).data)
+
+
+# ── Resident Companies ────────────────────────────────────────────────────────
+
+class ResidentCompanyViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    queryset = ResidentCompany.objects.select_related('venue')
+    serializer_class = ResidentCompanySerializer
+    filterset_fields = ['venue', 'status', 'company_type']
+    search_fields = ['name', 'artistic_director', 'contact_email', 'agreement_reference']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        serializer.save(organisation_id=self.request.user.organisation_id)

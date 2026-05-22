@@ -112,6 +112,9 @@ const allItems = {
   iufw:             { label: 'IUFW Register',        href: '/governance/iufw',       icon: AlertTriangle },
   delegation:       { label: 'Delegation Matrix',    href: '/settings/delegation',   icon: ClipboardCheck },
   agAudit:          { label: 'AG Audit',             href: '/governance/audit',      icon: BadgeCheck },
+  gl:               { label: 'General Ledger',       href: '/finance/gl',            icon: Landmark },
+  section32:        { label: 'Section 32',           href: '/governance/section32',  icon: FileText },
+  annualReport:     { label: 'Annual Report',        href: '/governance/annual-report', icon: BarChart3 },
   licences:         { label: 'IP Licences',          href: '/programming/licences',  icon: FileText },
   rentals:          { label: 'Venue Rentals',        href: '/structure/rentals',     icon: Landmark },
   csdRegister:      { label: 'CSD Register',         href: '/suppliers/csd',         icon: ClipboardCheck },
@@ -168,6 +171,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.rentals,
           allItems.patrons,
           allItems.donors,
+          allItems.gl,
         ],
       },
       {
@@ -186,7 +190,7 @@ export function navigationGroups(profile: OperatingProfile | null) {
       },
       {
         label: 'Oversight',
-        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
+        items: [allItems.governance, allItems.budgets, allItems.boardMeetings, allItems.boardMembers, allItems.complianceCompact, allItems.perfReports, allItems.iufw, allItems.declarations, allItems.agAudit, allItems.section32, allItems.annualReport, allItems.reports, allItems.audit, allItems.settings, allItems.entityConfig, allItems.delegation, allItems.venueManagement],
       },
     ];
   }
@@ -211,6 +215,8 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.declarations,
           allItems.perfReports,
           allItems.agAudit,
+          allItems.section32,
+          allItems.annualReport,
           allItems.reports,
           allItems.audit,
           allItems.tasks,

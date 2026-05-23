@@ -321,12 +321,22 @@ class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        from django.core.mail import send_mail
+        from django.conf import settings
         email = request.data.get('email', '')
         try:
             user = User.objects.get(email=email, is_active=True)
             token = uuid_lib.uuid4()
             user.invite_token = token
             user.save(update_fields=['invite_token'])
+            reset_url = f"{settings.FRONTEND_BASE_URL}/reset-password?token={token}"
+            send_mail(
+                subject='StageOS — Password Reset',
+                message=f"Hello {user.first_name or user.email},\n\nClick the link below to reset your password. This link is single-use.\n\n{reset_url}\n\nIf you did not request this, ignore this email.\n\nStageOS",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
         except User.DoesNotExist:
             pass
         return Response({'detail': 'If this email is registered, a reset link has been sent.'})

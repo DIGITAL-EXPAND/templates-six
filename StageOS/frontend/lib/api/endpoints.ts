@@ -1366,53 +1366,62 @@ export function createTillReconciliation(token: string, data: CreateTillReconcil
 
 // Budget
 export function fetchBudgets(token: string, params?: Record<string, string>) {
-  return apiRequest<PaginatedResponse<BudgetItem>>(`/api/v1/budgets/${queryString(params)}`, { token });
+  // TODO: confirm backend URL — governance/budget page uses this
+  return apiRequest<PaginatedResponse<BudgetItem>>(`/api/v1/governance/budgets/${queryString(params)}`, { token });
 }
 
 export function fetchBudgetLines(token: string, budgetId: string) {
-  return apiRequest<PaginatedResponse<BudgetLineItem>>(`/api/v1/budget-lines/?budget=${budgetId}`, { token });
+  // TODO: confirm backend URL
+  return apiRequest<PaginatedResponse<BudgetLineItem>>(`/api/v1/governance/budget-lines/?budget=${budgetId}`, { token });
 }
 
 export function createBudgetLine(token: string, data: CreateBudgetLinePayload) {
-  return apiRequest<BudgetLineItem>('/api/v1/budget-lines/', { method: 'POST', token, body: data });
+  // TODO: confirm backend URL
+  return apiRequest<BudgetLineItem>('/api/v1/governance/budget-lines/', { method: 'POST', token, body: data });
 }
 
 export function approveBudget(token: string, budgetId: string) {
-  return apiRequest<BudgetItem>(`/api/v1/budgets/${budgetId}/approve/`, { method: 'POST', token });
+  // TODO: confirm backend URL
+  return apiRequest<BudgetItem>(`/api/v1/governance/budgets/${budgetId}/approve/`, { method: 'POST', token });
 }
 
 // Board meetings
 export function fetchBoardMeetings(token: string, params?: Record<string, string>) {
-  return apiRequest<PaginatedResponse<BoardMeetingItem>>(`/api/v1/board-meetings/${queryString(params)}`, { token });
+  return apiRequest<PaginatedResponse<BoardMeetingItem>>(`/api/v1/governance/board-packs/${queryString(params)}`, { token });
 }
 
 export function createBoardMeeting(token: string, data: CreateBoardMeetingPayload) {
-  return apiRequest<BoardMeetingItem>('/api/v1/board-meetings/', { method: 'POST', token, body: data });
+  return apiRequest<BoardMeetingItem>('/api/v1/governance/board-packs/', { method: 'POST', token, body: data });
 }
 
 export function fetchBoardResolutions(token: string, meetingId: string) {
-  return apiRequest<PaginatedResponse<BoardResolutionItem>>(`/api/v1/board-resolutions/?meeting=${meetingId}`, { token });
+  // TODO: confirm backend URL — no board-resolutions endpoint defined
+  return apiRequest<PaginatedResponse<BoardResolutionItem>>(`/api/v1/governance/board-packs/${meetingId}/resolutions/`, { token });
 }
 
 // Procurement
 export function fetchPurchaseRequisitions(token: string, params?: Record<string, string>) {
-  return apiRequest<PaginatedResponse<PurchaseRequisitionItem>>(`/api/v1/requisitions/${queryString(params)}`, { token });
+  // TODO: confirm backend URL
+  return apiRequest<PaginatedResponse<PurchaseRequisitionItem>>(`/api/v1/suppliers/purchase-orders/${queryString(params)}`, { token });
 }
 
 export function createPurchaseRequisition(token: string, data: CreatePurchaseRequisitionPayload) {
-  return apiRequest<PurchaseRequisitionItem>('/api/v1/requisitions/', { method: 'POST', token, body: data });
+  // TODO: confirm backend URL
+  return apiRequest<PurchaseRequisitionItem>('/api/v1/suppliers/purchase-orders/', { method: 'POST', token, body: data });
 }
 
 export function approvePurchaseRequisition(token: string, id: string) {
-  return apiRequest<PurchaseRequisitionItem>(`/api/v1/requisitions/${id}/approve/`, { method: 'POST', token });
+  // TODO: confirm backend URL
+  return apiRequest<PurchaseRequisitionItem>(`/api/v1/suppliers/purchase-orders/${id}/approve/`, { method: 'POST', token });
 }
 
 export function rejectPurchaseRequisition(token: string, id: string, reason: string) {
-  return apiRequest<PurchaseRequisitionItem>(`/api/v1/requisitions/${id}/reject/`, { method: 'POST', token, body: { reason } });
+  // TODO: confirm backend URL
+  return apiRequest<PurchaseRequisitionItem>(`/api/v1/suppliers/purchase-orders/${id}/reject/`, { method: 'POST', token, body: { reason } });
 }
 
 export function fetchPurchaseOrders(token: string, params?: Record<string, string>) {
-  return apiRequest<PaginatedResponse<PurchaseOrderItem>>(`/api/v1/purchase-orders/${queryString(params)}`, { token });
+  return apiRequest<PaginatedResponse<PurchaseOrderItem>>(`/api/v1/suppliers/purchase-orders/${queryString(params)}`, { token });
 }
 
 // Patrons
@@ -1583,43 +1592,47 @@ export async function closeOutShow(token: string, showId: string): Promise<{ sho
 
 // Phase 7 endpoints
 export async function fetchDelegationMatrices(token: string) {
+  // TODO: confirm backend URL — settings/delegation page; no delegation-matrices endpoint in spec
   const res = await fetch('/api/v1/governance/delegation-matrices/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: DelegationMatrix[] }>;
 }
 
 export async function fetchDelegationMatrixRules(token: string, matrixId: string) {
+  // TODO: confirm backend URL
   const res = await fetch(`/api/v1/governance/delegation-matrices/${matrixId}/rules/`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<DelegationRule[]>;
 }
 
 export async function fetchShareholderCompacts(token: string) {
-  const res = await fetch('/api/v1/governance/shareholder-compacts/', { headers: { Authorization: `Bearer ${token}` } });
+  // TODO: confirm backend URL — governance/compliance page uses this
+  const res = await fetch('/api/v1/governance/compliances/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ShareholderCompact[] }>;
 }
 
 export async function fetchCompactProgress(token: string, compactId: string) {
-  const res = await fetch(`/api/v1/governance/shareholder-compacts/${compactId}/progress/`, { headers: { Authorization: `Bearer ${token}` } });
+  // TODO: confirm backend URL
+  const res = await fetch(`/api/v1/governance/compliances/${compactId}/progress/`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ targets: (CompactTarget & { achievement_pct: number })[] }>;
 }
 
 export async function fetchIUFWIncidents(token: string) {
-  const res = await fetch('/api/v1/governance/iufw-incidents/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/iufw/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: IUFWIncident[] }>;
 }
 
 export async function fetchIUFWRegister(token: string) {
-  const res = await fetch('/api/v1/governance/iufw-incidents/register/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/iufw/register/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json();
 }
 
 export async function createIUFWIncident(token: string, payload: Partial<IUFWIncident>) {
-  const res = await fetch('/api/v1/governance/iufw-incidents/', {
+  const res = await fetch('/api/v1/governance/iufw/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1668,7 +1681,7 @@ export async function fetchAGAuditEvidence(token: string, auditId: string) {
 
 export async function fetchProductionLicences(token: string, contextId?: string) {
   const qs = contextId ? `?operating_context=${contextId}` : '';
-  const res = await fetch(`/api/v1/programming/production-licences/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api/v1/programming/licence-agreements/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ProductionLicence[] }>;
 }
@@ -1690,20 +1703,20 @@ export async function createRentalEnquiry(token: string, payload: Partial<VenueR
 }
 
 export async function fetchCSDVerifications(token: string) {
-  const res = await fetch('/api/v1/suppliers/csd-verifications/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/suppliers/csd/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: SupplierCSDVerification[] }>;
 }
 
 // Phase 9 endpoints
 export async function fetchConflictDeclarations(token: string) {
-  const res = await fetch('/api/v1/governance/conflict-of-interest/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/declarations/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ConflictOfInterest[] }>;
 }
 
 export async function createConflictDeclaration(token: string, payload: Partial<ConflictOfInterest>) {
-  const res = await fetch('/api/v1/governance/conflict-of-interest/', {
+  const res = await fetch('/api/v1/governance/declarations/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1739,12 +1752,14 @@ export async function addQuoteToRFQ(token: string, rfqId: string, payload: Parti
 }
 
 export async function fetchPerformanceReports(token: string) {
+  // TODO: confirm backend URL — no performance-reports endpoint in spec; governance/performance page uses this
   const res = await fetch('/api/v1/governance/performance-reports/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: PerformanceReport[] }>;
 }
 
 export async function submitPerformanceReport(token: string, reportId: string) {
+  // TODO: confirm backend URL
   const res = await fetch(`/api/v1/governance/performance-reports/${reportId}/submit/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
@@ -1756,13 +1771,13 @@ export async function submitPerformanceReport(token: string, reportId: string) {
 // Phase 10 endpoints
 export async function fetchJournalEntries(token: string, contextId?: string) {
   const qs = contextId ? `?operating_context=${contextId}` : '';
-  const res = await fetch(`/api/v1/programming/journal/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api/v1/programming/production-journals/${qs}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ProductionJournalEntry[] }>;
 }
 
 export async function createJournalEntry(token: string, payload: Partial<ProductionJournalEntry>) {
-  const res = await fetch('/api/v1/programming/journal/', {
+  const res = await fetch('/api/v1/programming/production-journals/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -2125,7 +2140,7 @@ export async function approveCICheck(token: string, id: string) {
   return res.json() as Promise<CIComplianceCheck>;
 }
 export async function fetchTouringProductions(token: string) {
-  const res = await fetch('/api/v1/programming/touring/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/programming/touring-productions/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: TouringProduction[] }>;
 }
@@ -2135,12 +2150,12 @@ export async function fetchTouringVenueDates(token: string, touringProductionId:
   return res.json() as Promise<{ results: TouringVenueDate[] }>;
 }
 export async function fetchRecurringProductions(token: string) {
-  const res = await fetch('/api/v1/programming/recurring/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/programming/recurring-productions/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: RecurringProduction[] }>;
 }
 export async function createRecurringProduction(token: string, payload: Partial<RecurringProduction>) {
-  const res = await fetch('/api/v1/programming/recurring/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const res = await fetch('/api/v1/programming/recurring-productions/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('create failed');
   return res.json() as Promise<RecurringProduction>;
 }

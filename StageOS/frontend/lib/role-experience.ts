@@ -59,7 +59,7 @@ export function dashboardKind(profile: OperatingProfile | null): DashboardKind {
   if (userType === 'internal_admin') return 'admin';
   if (userType === 'executive') return 'executive';
   if (authority === 'gm') return 'gm';
-  if (userType === 'read_only') return 'board';
+  if (userType === 'read_only') return 'read_only';
   if (userType === 'client_external') return 'client';
   if (userType === 'supplier_external') return 'supplier';
   if (userType === 'artist_external') return 'artist';
@@ -74,7 +74,6 @@ export function dashboardKind(profile: OperatingProfile | null): DashboardKind {
   if (department.includes('Governance')) return 'governance';
   if (department.includes('Hospitality')) return 'hospitality';
   if (userType === 'staff') return 'staff';
-  if (userType === 'read_only') return 'read_only';
   return 'generic';
 }
 
@@ -279,15 +278,15 @@ export function navigationGroups(profile: OperatingProfile | null) {
 
   if (kind === 'staff') {
     return [
-      { heading: 'My Work', items: [allItems.tasks, allItems.notifications] },
-      { heading: 'Productions', items: [allItems.shows, allItems.calendar] },
-      { heading: 'Documents', items: [allItems.documents] },
+      { label: 'My Work', items: [allItems.tasks, allItems.notifications] },
+      { label: 'Productions', items: [allItems.shows, allItems.calendar] },
+      { label: 'Documents', items: [allItems.documents] },
     ];
   }
 
   if (kind === 'read_only') {
     return [
-      { heading: 'Overview', items: [allItems.dashboard, allItems.calendar] },
+      { label: 'Overview', items: [allItems.dashboard, allItems.calendar] },
     ];
   }
 

@@ -208,7 +208,7 @@ class NotificationViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return super().get_queryset().filter(recipient=self.request.user)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='read')
     def mark_read(self, request, pk=None):
         notification = self.get_object()
         updated = mark_notification_read(notification, request.user)

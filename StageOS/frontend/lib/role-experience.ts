@@ -73,6 +73,8 @@ export function dashboardKind(profile: OperatingProfile | null): DashboardKind {
   if (department.includes('Youth')) return 'youth';
   if (department.includes('Governance')) return 'governance';
   if (department.includes('Hospitality')) return 'hospitality';
+  if (userType === 'staff') return 'staff';
+  if (userType === 'read_only') return 'read_only';
   return 'generic';
 }
 
@@ -272,6 +274,20 @@ export function navigationGroups(profile: OperatingProfile | null) {
           allItems.tasks,
         ],
       },
+    ];
+  }
+
+  if (kind === 'staff') {
+    return [
+      { heading: 'My Work', items: [allItems.tasks, allItems.notifications] },
+      { heading: 'Productions', items: [allItems.shows, allItems.calendar] },
+      { heading: 'Documents', items: [allItems.documents] },
+    ];
+  }
+
+  if (kind === 'read_only') {
+    return [
+      { heading: 'Overview', items: [allItems.dashboard, allItems.calendar] },
     ];
   }
 

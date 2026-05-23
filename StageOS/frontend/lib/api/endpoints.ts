@@ -1366,22 +1366,18 @@ export function createTillReconciliation(token: string, data: CreateTillReconcil
 
 // Budget
 export function fetchBudgets(token: string, params?: Record<string, string>) {
-  // TODO: confirm backend URL — governance/budget page uses this
   return apiRequest<PaginatedResponse<BudgetItem>>(`/api/v1/governance/budgets/${queryString(params)}`, { token });
 }
 
 export function fetchBudgetLines(token: string, budgetId: string) {
-  // TODO: confirm backend URL
   return apiRequest<PaginatedResponse<BudgetLineItem>>(`/api/v1/governance/budget-lines/?budget=${budgetId}`, { token });
 }
 
 export function createBudgetLine(token: string, data: CreateBudgetLinePayload) {
-  // TODO: confirm backend URL
   return apiRequest<BudgetLineItem>('/api/v1/governance/budget-lines/', { method: 'POST', token, body: data });
 }
 
 export function approveBudget(token: string, budgetId: string) {
-  // TODO: confirm backend URL
   return apiRequest<BudgetItem>(`/api/v1/governance/budgets/${budgetId}/approve/`, { method: 'POST', token });
 }
 
@@ -1395,28 +1391,23 @@ export function createBoardMeeting(token: string, data: CreateBoardMeetingPayloa
 }
 
 export function fetchBoardResolutions(token: string, meetingId: string) {
-  // TODO: confirm backend URL — no board-resolutions endpoint defined
-  return apiRequest<PaginatedResponse<BoardResolutionItem>>(`/api/v1/governance/board-packs/${meetingId}/resolutions/`, { token });
+  return apiRequest<PaginatedResponse<BoardResolutionItem>>(`/api/v1/governance/board-resolutions/?board_meeting=${meetingId}`, { token });
 }
 
 // Procurement
 export function fetchPurchaseRequisitions(token: string, params?: Record<string, string>) {
-  // TODO: confirm backend URL
   return apiRequest<PaginatedResponse<PurchaseRequisitionItem>>(`/api/v1/suppliers/purchase-orders/${queryString(params)}`, { token });
 }
 
 export function createPurchaseRequisition(token: string, data: CreatePurchaseRequisitionPayload) {
-  // TODO: confirm backend URL
   return apiRequest<PurchaseRequisitionItem>('/api/v1/suppliers/purchase-orders/', { method: 'POST', token, body: data });
 }
 
 export function approvePurchaseRequisition(token: string, id: string) {
-  // TODO: confirm backend URL
   return apiRequest<PurchaseRequisitionItem>(`/api/v1/suppliers/purchase-orders/${id}/approve/`, { method: 'POST', token });
 }
 
 export function rejectPurchaseRequisition(token: string, id: string, reason: string) {
-  // TODO: confirm backend URL
   return apiRequest<PurchaseRequisitionItem>(`/api/v1/suppliers/purchase-orders/${id}/reject/`, { method: 'POST', token, body: { reason } });
 }
 
@@ -1592,35 +1583,31 @@ export async function closeOutShow(token: string, showId: string): Promise<{ sho
 
 // Phase 7 endpoints
 export async function fetchDelegationMatrices(token: string) {
-  // TODO: confirm backend URL — settings/delegation page; no delegation-matrices endpoint in spec
   const res = await fetch('/api/v1/governance/delegation-matrices/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: DelegationMatrix[] }>;
 }
 
 export async function fetchDelegationMatrixRules(token: string, matrixId: string) {
-  // TODO: confirm backend URL
-  const res = await fetch(`/api/v1/governance/delegation-matrices/${matrixId}/rules/`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api/v1/governance/delegation-rules/?delegation_matrix=${matrixId}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
-  return res.json() as Promise<DelegationRule[]>;
+  return res.json() as Promise<{ results: DelegationRule[] }>;
 }
 
 export async function fetchShareholderCompacts(token: string) {
-  // TODO: confirm backend URL — governance/compliance page uses this
-  const res = await fetch('/api/v1/governance/compliances/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/shareholder-compacts/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ShareholderCompact[] }>;
 }
 
 export async function fetchCompactProgress(token: string, compactId: string) {
-  // TODO: confirm backend URL
-  const res = await fetch(`/api/v1/governance/compliances/${compactId}/progress/`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/api/v1/governance/shareholder-compacts/${compactId}/progress/`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ targets: (CompactTarget & { achievement_pct: number })[] }>;
 }
 
 export async function fetchIUFWIncidents(token: string) {
-  const res = await fetch('/api/v1/governance/iufw/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/iufw-incidents/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: IUFWIncident[] }>;
 }
@@ -1752,14 +1739,12 @@ export async function addQuoteToRFQ(token: string, rfqId: string, payload: Parti
 }
 
 export async function fetchPerformanceReports(token: string) {
-  // TODO: confirm backend URL — no performance-reports endpoint in spec; governance/performance page uses this
   const res = await fetch('/api/v1/governance/performance-reports/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: PerformanceReport[] }>;
 }
 
 export async function submitPerformanceReport(token: string, reportId: string) {
-  // TODO: confirm backend URL
   const res = await fetch(`/api/v1/governance/performance-reports/${reportId}/submit/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },

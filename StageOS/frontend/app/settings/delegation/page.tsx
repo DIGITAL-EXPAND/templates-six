@@ -43,7 +43,7 @@ export default function DelegationMatrixPage() {
     if (rulesMap[matrixId]) return;
     setRulesLoading((prev) => ({ ...prev, [matrixId]: true }));
     fetchDelegationMatrixRules(token, matrixId)
-      .then((rules) => setRulesMap((prev) => ({ ...prev, [matrixId]: rules })))
+      .then((res) => setRulesMap((prev) => ({ ...prev, [matrixId]: Array.isArray(res) ? res : (res as { results: DelegationRule[] }).results })))
       .catch(() => setRulesMap((prev) => ({ ...prev, [matrixId]: [] })))
       .finally(() => setRulesLoading((prev) => ({ ...prev, [matrixId]: false })));
   }

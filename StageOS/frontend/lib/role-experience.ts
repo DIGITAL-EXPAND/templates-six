@@ -45,6 +45,8 @@ export type DashboardKind =
   | 'governance'
   | 'hospitality'
   | 'board'
+  | 'staff'
+  | 'read_only'
   | 'client'
   | 'supplier'
   | 'artist'

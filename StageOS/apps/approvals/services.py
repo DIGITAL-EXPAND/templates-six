@@ -112,4 +112,24 @@ def decide_approval(approval_request, user, decision, comment='', evidence=None)
             department=approver_dept,
         )
 
+        # Send email notification to requestor
+        from django.core.mail import send_mail
+        from django.conf import settings
+        requestor = approval_request.requested_by
+        if requestor and requestor.email:
+            action_word = 'approved' if decision == ApprovalDecision.APPROVED else decision.replace('_', ' ')
+            approval_label = str(approval_request)
+            send_mail(
+                subject=f'StageOS — Your request has been {action_word}',
+                message=(
+                    f"Hello {requestor.first_name or requestor.email},\n\n"
+                    f"Your approval request '{approval_label}' has been {action_word}.\n\n"
+                    f"Log in to StageOS to view details: {settings.FRONTEND_BASE_URL}/approvals\n\n"
+                    f"StageOS"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[requestor.email],
+                fail_silently=True,
+            )
+
     return approval_request

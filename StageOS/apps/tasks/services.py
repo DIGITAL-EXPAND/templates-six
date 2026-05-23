@@ -88,6 +88,24 @@ def create_task(context, user, data):
         task=task,
         department=task.department,
     )
+    if task.assigned_to and task.assigned_to.email:
+        from django.core.mail import send_mail
+        from django.conf import settings
+        assignee = task.assigned_to
+        send_mail(
+            subject=f'StageOS — Task assigned: {task.title}',
+            message=(
+                f"Hello {assignee.first_name or assignee.email},\n\n"
+                f"A task has been assigned to you:\n\n"
+                f"{task.title}\n"
+                f"Due: {task.due_date or 'No due date'}\n\n"
+                f"Log in to view: {settings.FRONTEND_BASE_URL}/tasks\n\n"
+                f"StageOS"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[assignee.email],
+            fail_silently=True,
+        )
     AuditEvent.objects.create(
         organisation=context.organisation,
         actor=user,
@@ -249,6 +267,24 @@ def assign_task(task, user, assigned_to=None, due_date=None, comment=''):
         task=task,
         department=task.department,
     )
+    if task.assigned_to and task.assigned_to.email:
+        from django.core.mail import send_mail
+        from django.conf import settings
+        assignee = task.assigned_to
+        send_mail(
+            subject=f'StageOS — Task assigned: {task.title}',
+            message=(
+                f"Hello {assignee.first_name or assignee.email},\n\n"
+                f"A task has been assigned to you:\n\n"
+                f"{task.title}\n"
+                f"Due: {task.due_date or 'No due date'}\n\n"
+                f"Log in to view: {settings.FRONTEND_BASE_URL}/tasks\n\n"
+                f"StageOS"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[assignee.email],
+            fail_silently=True,
+        )
     AuditService.record(
         organisation=task.organisation,
         actor=user,

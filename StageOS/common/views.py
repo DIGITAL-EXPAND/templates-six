@@ -27,3 +27,21 @@ class TenantScopedMixin:
             {'detail': 'Hard deletion is not permitted. Archive or cancel this record instead.'},
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
+
+
+class ReadOnlyTenantMixin(TenantScopedMixin):
+    """For read_only, supplier_external, artist_external, client_external, youth_external users.
+
+    Restricts the viewset to safe HTTP methods only (GET, HEAD, OPTIONS).
+    Use this mixin on views that should be readable but not writable by the
+    above user types.
+
+    Note on external user scoping:
+    - supplier_external: read access is further restricted by CanAccessSupplierData
+      which limits them to their own supplier records.
+    - artist_external: similarly scoped by CanAccessArtistData.
+    - client_external / youth_external: read-only on their own operating context.
+      A SupplierScopedMixin (object-level) does not yet exist — this is a documented
+      gap to be addressed when supplier self-service views are built.
+    """
+    http_method_names = ['get', 'head', 'options']

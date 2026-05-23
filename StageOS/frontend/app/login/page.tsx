@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ArrowRight, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -118,6 +119,11 @@ export default function LoginPage() {
               {submitting ? 'Signing in' : 'Sign in securely'}
               <ArrowRight className="h-4 w-4" />
             </button>
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-700">
+                Forgot password?
+              </Link>
+            </div>
           </form>
           <div className="mt-5 flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-600">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" />

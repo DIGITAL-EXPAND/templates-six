@@ -2,20 +2,54 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 db.sqlite3
+
+# Environment files — never commit real env files
 .env
+.env.local
+.env.production
+.env.staging
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Virtual environments
 .venv/
 venv/
-.env.local
+env/
+
+# Test / coverage
 .coverage
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+pytest.xml
+
+# Editor / OS
 .DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+
+# Logs
 server.log
+*.log
+
+# Keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Claude Code session data
 .claude/
+
+# User-uploaded media files
 media/
 
 # Frontend
 frontend/.next/
 frontend/node_modules/
 frontend/tsconfig.tsbuildinfo
+frontend/.env.local
+frontend/.env.production

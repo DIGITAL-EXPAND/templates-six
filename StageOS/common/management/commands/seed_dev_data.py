@@ -187,14 +187,14 @@ class Command(BaseCommand):
                 },
             ),
             (
-                'JCT Multi-Theatre Operating Model',
+                'Multi-Theatre Operating Model',
                 'multi_theatre',
                 False,
                 False,
                 'Template for a multi-theatre structure with central shared services and theatre-level GMs.',
                 {
                     'template': True,
-                    'sites': ['Joburg Theatre', 'Roodepoort Theatre', 'Soweto Theatre', 'Head Office'],
+                    'sites': ['Main Theatre', 'Studio Theatre', 'Outdoor Venue', 'Head Office'],
                     'features': [
                         'Head Office',
                         'Multiple theatre sites',
@@ -209,7 +209,7 @@ class Command(BaseCommand):
                 },
             ),
             (
-                'State Theatre Institutional Operating Model',
+                'Institutional Theatre Operating Model',
                 'institutional',
                 False,
                 False,

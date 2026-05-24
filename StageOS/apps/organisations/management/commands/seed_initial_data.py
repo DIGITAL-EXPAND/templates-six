@@ -45,13 +45,13 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--org-name',
-            default='Joburg City Theatres',
-            help='Name of the organisation to create (default: "Joburg City Theatres")',
+            default='My Theatre',
+            help='Name of the organisation to create',
         )
         parser.add_argument(
             '--org-email',
-            default='admin@jct.org.za',
-            help='Email for the organisation (stored in entity config, default: admin@jct.org.za)',
+            default='admin@theatre.local',
+            help='Email for the organisation admin contact',
         )
         parser.add_argument(
             '--admin-email',

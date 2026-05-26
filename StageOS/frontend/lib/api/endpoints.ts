@@ -1383,11 +1383,11 @@ export function approveBudget(token: string, budgetId: string) {
 
 // Board meetings
 export function fetchBoardMeetings(token: string, params?: Record<string, string>) {
-  return apiRequest<PaginatedResponse<BoardMeetingItem>>(`/api/v1/governance/board-packs/${queryString(params)}`, { token });
+  return apiRequest<PaginatedResponse<BoardMeetingItem>>(`/api/v1/governance/board-meetings/${queryString(params)}`, { token });
 }
 
 export function createBoardMeeting(token: string, data: CreateBoardMeetingPayload) {
-  return apiRequest<BoardMeetingItem>('/api/v1/governance/board-packs/', { method: 'POST', token, body: data });
+  return apiRequest<BoardMeetingItem>('/api/v1/governance/board-meetings/', { method: 'POST', token, body: data });
 }
 
 export function fetchBoardResolutions(token: string, meetingId: string) {
@@ -1531,8 +1531,8 @@ export async function fetchBoardPack(token: string, meetingId: string): Promise<
 
 export async function fetchVenueCapacityConfigs(token: string, spaceId?: string): Promise<VenueCapacityConfigItem[]> {
   const url = spaceId
-    ? `/api/v1/structure/venue-capacity-configs/?space=${spaceId}`
-    : '/api/v1/structure/venue-capacity-configs/';
+    ? `/api/v1/venue-capacity-configs/?space=${spaceId}`
+    : '/api/v1/venue-capacity-configs/';
   const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load capacity configs' });
   const data = await r.json();
@@ -1540,14 +1540,14 @@ export async function fetchVenueCapacityConfigs(token: string, spaceId?: string)
 }
 
 export async function fetchVenues(token: string): Promise<{ id: string; name: string; venue_type: string; site: string; site_name: string; capacity: number; is_active: boolean }[]> {
-  const r = await fetch('/api/v1/structure/venues/', { headers: { Authorization: `Bearer ${token}` } });
+  const r = await fetch('/api/v1/venues/', { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load venues' });
   const data = await r.json();
   return Array.isArray(data) ? data : (data.results ?? []);
 }
 
 export async function fetchSpacesForVenue(token: string): Promise<{ id: string; name: string; space_type: string; venue: string; venue_name: string; capacity: number; is_bookable: boolean }[]> {
-  const r = await fetch('/api/v1/structure/spaces/', { headers: { Authorization: `Bearer ${token}` } });
+  const r = await fetch('/api/v1/spaces/', { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new ApiError(r.status, { detail: 'Failed to load spaces' });
   const data = await r.json();
   return Array.isArray(data) ? data : (data.results ?? []);
@@ -1613,13 +1613,13 @@ export async function fetchIUFWIncidents(token: string) {
 }
 
 export async function fetchIUFWRegister(token: string) {
-  const res = await fetch('/api/v1/governance/iufw/register/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/iufw-incidents/register/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json();
 }
 
 export async function createIUFWIncident(token: string, payload: Partial<IUFWIncident>) {
-  const res = await fetch('/api/v1/governance/iufw/', {
+  const res = await fetch('/api/v1/governance/iufw-incidents/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1629,7 +1629,7 @@ export async function createIUFWIncident(token: string, payload: Partial<IUFWInc
 }
 
 export async function fetchEntityConfig(token: string) {
-  const res = await fetch('/api/v1/organisations/entity-config/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/entity-config/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: TenantEntityConfig[] }>;
 }
@@ -1674,13 +1674,13 @@ export async function fetchProductionLicences(token: string, contextId?: string)
 }
 
 export async function fetchRentalEnquiries(token: string) {
-  const res = await fetch('/api/v1/structure/rental-enquiries/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/rental-enquiries/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: VenueRentalEnquiry[] }>;
 }
 
 export async function createRentalEnquiry(token: string, payload: Partial<VenueRentalEnquiry>) {
-  const res = await fetch('/api/v1/structure/rental-enquiries/', {
+  const res = await fetch('/api/v1/rental-enquiries/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1697,13 +1697,13 @@ export async function fetchCSDVerifications(token: string) {
 
 // Phase 9 endpoints
 export async function fetchConflictDeclarations(token: string) {
-  const res = await fetch('/api/v1/governance/declarations/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/governance/conflict-of-interest/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ConflictOfInterest[] }>;
 }
 
 export async function createConflictDeclaration(token: string, payload: Partial<ConflictOfInterest>) {
-  const res = await fetch('/api/v1/governance/declarations/', {
+  const res = await fetch('/api/v1/governance/conflict-of-interest/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1958,19 +1958,19 @@ export async function agreeCoProductionSettlement(token: string, id: string) {
 }
 
 export async function fetchRentalBookings(token: string) {
-  const res = await fetch('/api/v1/structure/rental-bookings/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/rental-bookings/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: RentalBooking[] }>;
 }
 
 export async function fetchRentalInvoices(token: string) {
-  const res = await fetch('/api/v1/structure/rental-invoices/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/rental-invoices/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: RentalInvoice[] }>;
 }
 
 export async function createRentalInvoice(token: string, bookingId: string, invoiceType: string) {
-  const res = await fetch(`/api/v1/structure/rental-bookings/${bookingId}/invoice/`, {
+  const res = await fetch(`/api/v1/rental-bookings/${bookingId}/invoice/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ invoice_type: invoiceType }),
@@ -2003,7 +2003,7 @@ export async function createFestivalPass(token: string, payload: Partial<Festiva
 }
 
 export async function fetchResidentCompanies(token: string) {
-  const res = await fetch('/api/v1/structure/resident-companies/', { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch('/api/v1/resident-companies/', { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ results: ResidentCompany[] }>;
 }
